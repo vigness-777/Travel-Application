@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Explore Cities | Traveloop</title>
+  <link rel="stylesheet" href="globals.css">
+  <style>
+    .search-hero { background:var(--grad-hero); border-radius:var(--radius-lg); padding:36px; margin-bottom:28px; border:1px solid rgba(139,92,246,0.2); text-align:center; position:relative; overflow:hidden; }
+    .search-hero::before { content:''; position:absolute; top:-40px; left:50%; transform:translateX(-50%); width:400px; height:200px; border-radius:50%; background:radial-gradient(circle,rgba(139,92,246,0.15),transparent); pointer-events:none; }
+    .search-hero-title { font-size:28px; font-weight:800; margin-bottom:8px; }
+    .search-bar-big { display:flex; align-items:center; gap:12px; background:rgba(255,255,255,0.07); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.15); border-radius:14px; padding:14px 20px; max-width:600px; margin:20px auto 0; }
+    .search-bar-big input { flex:1; background:none; border:none; outline:none; color:var(--text-primary); font-size:16px; }
+    .search-bar-big input::placeholder { color:rgba(255,255,255,0.4); }
+
+    .filter-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:24px; }
+    .city-card-lg { border-radius:var(--radius); overflow:hidden; background:var(--card); border:1px solid var(--border); transition:var(--transition); cursor:pointer; }
+    .city-card-lg:hover { transform:translateY(-4px); box-shadow:var(--glow-card); border-color:var(--border-bright); }
+    .city-img { height:200px; position:relative; overflow:hidden; }
+    .city-img img { width:100%; height:100%; object-fit:cover; transition:transform 0.5s ease; }
+    .city-card-lg:hover .city-img img { transform:scale(1.06); }
+    .city-img-overlay { position:absolute; inset:0; background:linear-gradient(to top,rgba(5,5,8,0.9),transparent 50%); }
+    .city-img-tag { position:absolute; top:12px; left:12px; }
+    .city-img-pop { position:absolute; top:12px; right:12px; background:rgba(0,0,0,0.6); backdrop-filter:blur(8px); border-radius:20px; padding:4px 10px; font-size:11px; font-weight:600; border:1px solid rgba(255,255,255,0.1); }
+    .city-img-name { position:absolute; bottom:12px; left:14px; }
+    .city-body { padding:16px; }
+    .city-desc { font-size:13px; color:var(--text-secondary); margin-bottom:12px; line-height:1.5; }
+    .city-footer { display:flex; align-items:center; justify-content:space-between; }
+    .cost-indicator { display:flex; align-items:center; gap:4px; font-size:12px; color:var(--text-muted); }
+    .cost-dot { width:8px; height:8px; border-radius:50%; }
+    .pop-bar { width:80px; }
+    @keyframes popIn { from{opacity:0;transform:scale(0.9) translateY(10px)} to{opacity:1;transform:scale(1) translateY(0)} }
+    .city-card-lg { animation:popIn 0.4s ease both; }
+  </style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+<div id="nav-placeholder"></div>
+<div class="page-layout">
+  <div id="topbar-placeholder"></div>
+  <div class="page-content">
+
+    <div class="search-hero">
+      <div style="font-size:13px;color:var(--cyan);font-weight:600;letter-spacing:0.05em;margin-bottom:8px">🌏 EXPLORE INDIA</div>
+      <div class="search-hero-title">Discover Your Next <span class="gradient-text">Destination</span></div>
+      <div style="font-size:14px;color:var(--text-muted)">26 handpicked cities across India, ready to explore</div>
+      <div class="search-bar-big">
+        <span style="font-size:20px">🔍</span>
+        <input type="text" id="main-search" placeholder="Search cities, states, tags…" oninput="applyFilters()">
+        <button onclick="applyFilters()" class="btn btn-primary btn-sm">Search</button>
+      </div>
+    </div>
+
+    <div class="filter-row">
+      <div style="font-size:13px;font-weight:600;color:var(--text-muted)">Filter:</div>
+      <button class="chip active" onclick="setStateFilter('all',this)">🇮🇳 All India</button>
+      <button class="chip" onclick="setStateFilter('Tamil Nadu',this)">🛕 Tamil Nadu</button>
+      <button class="chip" onclick="setStateFilter('Kerala',this)">🌿 Kerala</button>
+      <button class="chip" onclick="setStateFilter('Rajasthan',this)">🏰 Rajasthan</button>
+      <button class="chip" onclick="setStateFilter('Goa',this)">🏖️ Goa</button>
+      <button class="chip" onclick="setStateFilter('Himachal Pradesh',this)">🏔️ Himachal</button>
+      <div style="margin-left:auto">
+        <select onchange="setSortFilter(this.value)" class="form-select" style="width:140px;padding:7px 12px;font-size:12px">
+          <option value="pop">Most Popular</option>
+          <option value="cost-low">Lowest Cost</option>
+          <option value="cost-high">Highest Cost</option>
+          <option value="name">Name A-Z</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-bottom:12px;display:flex;align-items:center;gap:8px">
+      <div class="badge badge-purple" id="result-count">26 cities</div>
+      <div style="font-size:12px;color:var(--text-muted)" id="filter-info"></div>
+    </div>
+
+    <div class="grid-auto" id="cities-grid"></div>
+  </div>
+</div>
+<div class="toast-container" id="toast-container"></div>
+<script src="db.js"></script>
+<script>
+let stateFilter='all', sortFilter='pop', searchQ='';
+
+document.addEventListener('DOMContentLoaded',()=>{
+  if(!Auth.require()) return;
+  seedData();
+  document.getElementById('nav-placeholder').innerHTML=buildNav('cities');
+  document.getElementById('topbar-placeholder').innerHTML=buildTopbar('Explore Cities');
+  // Pre-fill search from URL
+  const q=new URLSearchParams(location.search).get('q')||'';
+  if(q){ document.getElementById('main-search').value=q; searchQ=q; }
+  applyFilters();
+});
+
+function setStateFilter(state,btn) {
+  stateFilter=state;
+  document.querySelectorAll('.filter-row .chip').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+}
+
+function setSortFilter(s) { sortFilter=s; applyFilters(); }
+
+function applyFilters() {
+  searchQ=document.getElementById('main-search').value.toLowerCase().trim();
+  let cities=[...CITIES];
+  if(stateFilter!=='all') cities=cities.filter(c=>c.state===stateFilter);
+  if(searchQ) cities=cities.filter(c=>c.name.toLowerCase().includes(searchQ)||c.state.toLowerCase().includes(searchQ)||c.tag.toLowerCase().includes(searchQ)||(c.desc||'').toLowerCase().includes(searchQ));
+  if(sortFilter==='pop') cities.sort((a,b)=>b.pop-a.pop);
+  else if(sortFilter==='cost-low') cities.sort((a,b)=>a.cost-b.cost);
+  else if(sortFilter==='cost-high') cities.sort((a,b)=>b.cost-a.cost);
+  else cities.sort((a,b)=>a.name.localeCompare(b.name));
+  document.getElementById('result-count').textContent=`${cities.length} cities`;
+  document.getElementById('filter-info').textContent=searchQ?`Results for "${searchQ}"`:stateFilter!=='all'?`Showing ${stateFilter}`:'';
+  renderCities(cities);
+}
+
+function renderCities(cities) {
+  const grid=document.getElementById('cities-grid');
+  if(!cities.length){
+    grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🔍</div><div class="empty-title">No cities found</div><div class="empty-sub">Try a different search or filter</div></div>`;
+    return;
+  }
+  const costBg=(cost)=>cost<2000?'#34d399':cost<3000?'#22d3ee':'#f87171';
+  grid.innerHTML=cities.map((c,i)=>`
+    <div class="city-card-lg" style="animation-delay:${i*0.04}s">
+      <div class="city-img">
+        <img src="${c.img}" alt="${c.name}" onerror="this.style.display='none'" loading="lazy">
+        <div class="city-img-overlay"></div>
+        <div class="city-img-tag"><span class="badge badge-purple">${c.tag}</span></div>
+        <div class="city-img-pop">⭐ ${c.pop}%</div>
+        <div class="city-img-name">
+          <div style="font-size:20px;font-weight:800">${c.name}</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.6)">${c.state}</div>
+        </div>
+      </div>
+      <div class="city-body">
+        <div class="city-desc">${c.desc||'A beautiful destination in India.'}</div>
+        <div style="margin-bottom:12px">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Popularity</div>
+          <div class="progress-bar pop-bar" style="width:100%"><div class="progress-fill" style="width:${c.pop}%"></div></div>
+        </div>
+        <div class="city-footer">
+          <div class="cost-indicator">
+            <div class="cost-dot" style="background:${costBg(c.cost)}"></div>
+            <span>Avg ₹${c.cost.toLocaleString('en-IN')}/day</span>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button onclick="addToTrip('${c.id}')" class="btn btn-primary btn-sm">+ Add to Trip</button>
+            <a href="itinerary.html" class="btn btn-ghost btn-sm">🗺️</a>
+          </div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function addToTrip(cityId) {
+  const trips=DB.where('trips',t=>t.userId===Auth.currentUser().id&&t.status==='upcoming');
+  if(!trips.length){ showToast('Create a trip first!','error'); setTimeout(()=>window.location.href='create-trip.html',1200); return; }
+  const city=CITIES.find(c=>c.id===cityId);
+  const trip=trips[0];
+  const existing=DB.where('stops',s=>s.tripId===trip.id&&s.cityId===cityId);
+  if(existing.length){ showToast(`${city.name} already in "${trip.name}"!`,'error'); return; }
+  DB.insert('stops',{tripId:trip.id,cityId,cityName:city.name,order:DB.where('stops',s=>s.tripId===trip.id).length,days:2,activities:[],hotelCost:city.cost*2,transportCost:Math.round(city.cost*0.3),foodCost:Math.round(city.cost*0.25)*2,activityCost:0});
+  showToast(`${city.name} added to "${trip.name}" ✅`);
+}
+</script>
+</body>
+</html>

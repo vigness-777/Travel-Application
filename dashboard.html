@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Dashboard | Traveloop</title>
+  <meta name="description" content="Your travel planning dashboard — upcoming trips, smart suggestions and India inspiration.">
+  <link rel="stylesheet" href="globals.css">
+  <style>
+    .hero-banner {
+      background:var(--grad-hero); border-radius:var(--radius-lg);
+      padding:40px; margin-bottom:28px; position:relative; overflow:hidden;
+      border:1px solid rgba(139,92,246,0.2);
+    }
+    .hero-banner::before { content:''; position:absolute; top:-40px; right:-40px; width:260px; height:260px; border-radius:50%; background:radial-gradient(circle,rgba(139,92,246,0.2),transparent); pointer-events:none; }
+    .hero-banner::after { content:''; position:absolute; bottom:-60px; right:80px; width:180px; height:180px; border-radius:50%; background:radial-gradient(circle,rgba(34,211,238,0.12),transparent); pointer-events:none; }
+    .hero-greeting { font-size:13px; color:var(--cyan); font-weight:600; letter-spacing:0.05em; margin-bottom:8px; }
+    .hero-name { font-size:32px; font-weight:800; line-height:1.2; margin-bottom:12px; }
+    .hero-tagline { color:var(--text-secondary); font-size:15px; margin-bottom:24px; max-width:480px; }
+    .hero-actions { display:flex; gap:12px; flex-wrap:wrap; }
+    .hero-float { position:absolute; right:40px; top:50%; transform:translateY(-50%); animation:float 4s ease-in-out infinite; display:flex; flex-direction:column; gap:8px; }
+    .hero-float-card { background:rgba(255,255,255,0.06); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:14px 20px; text-align:center; }
+    .hero-float-val { font-size:22px; font-weight:800; font-family:'Space Grotesk',sans-serif; }
+    .hero-float-lbl { font-size:11px; color:var(--text-muted); }
+    .section-divider { height:1px; background:linear-gradient(90deg,transparent,var(--purple),var(--cyan),transparent); margin:12px 0 28px; }
+
+    /* Trip cards */
+    .trip-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:20px; }
+    .trip-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; transition:var(--transition); cursor:pointer; text-decoration:none; color:inherit; display:block; }
+    .trip-card:hover { transform:translateY(-4px); box-shadow:var(--glow-card); border-color:var(--border-bright); }
+    .trip-img { height:180px; position:relative; overflow:hidden; }
+    .trip-img img { width:100%; height:100%; object-fit:cover; transition:transform 0.5s ease; }
+    .trip-card:hover .trip-img img { transform:scale(1.05); }
+    .trip-img-overlay { position:absolute; inset:0; background:linear-gradient(to top,rgba(5,5,8,0.9) 0%,transparent 60%); }
+    .trip-img-badge { position:absolute; top:12px; right:12px; }
+    .trip-img-cities { position:absolute; bottom:12px; left:14px; display:flex; gap:6px; flex-wrap:wrap; }
+    .trip-city-pill { background:rgba(0,0,0,0.5); backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.15); border-radius:20px; padding:3px 10px; font-size:11px; font-weight:500; }
+    .trip-body { padding:18px; }
+    .trip-name { font-size:16px; font-weight:700; margin-bottom:6px; }
+    .trip-meta { display:flex; align-items:center; gap:14px; font-size:12px; color:var(--text-muted); margin-bottom:14px; }
+    .trip-footer { display:flex; align-items:center; justify-content:space-between; }
+    .trip-budget { font-size:14px; font-weight:700; }
+
+    /* City cards */
+    .city-card { border-radius:var(--radius); overflow:hidden; position:relative; height:220px; cursor:pointer; display:block; text-decoration:none; }
+    .city-card img { width:100%; height:100%; object-fit:cover; transition:transform 0.5s ease; }
+    .city-card:hover img { transform:scale(1.08); }
+    .city-card-overlay { position:absolute; inset:0; background:linear-gradient(to top,rgba(5,5,8,0.9) 0%,transparent 60%); }
+    .city-card-body { position:absolute; bottom:0; left:0; right:0; padding:16px; }
+    .city-card-name { font-size:18px; font-weight:800; }
+    .city-card-state { font-size:12px; color:var(--text-muted); }
+    .city-card-tag { position:absolute; top:12px; left:12px; }
+
+    /* Smart widget */
+    .smart-widget { background:var(--grad-card); border:1px solid rgba(139,92,246,0.25); border-radius:var(--radius); padding:24px; }
+    .smart-widget-header { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+    .smart-orb-sm { width:40px; height:40px; border-radius:12px; background:var(--grad-main); display:flex; align-items:center; justify-content:center; font-size:20px; animation:glow-pulse 2s ease-in-out infinite; }
+    .smart-tip { background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px 16px; margin-bottom:10px; font-size:13px; color:var(--text-secondary); display:flex; align-items:flex-start; gap:10px; transition:var(--transition); }
+    .smart-tip:hover { background:rgba(108,71,255,0.08); border-color:rgba(108,71,255,0.3); color:var(--text-primary); }
+
+    @media(max-width:900px){ .hero-float{display:none;} }
+  </style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+<div id="nav-placeholder"></div>
+<div class="page-layout">
+  <div id="topbar-placeholder"></div>
+  <div class="page-content">
+
+    <!-- HERO BANNER -->
+    <div class="hero-banner animate-fadeInUp" id="hero-section">
+      <div class="hero-greeting">🌅 Good day, explorer</div>
+      <div class="hero-name" id="hero-name">Loading…</div>
+      <div class="hero-tagline">Your next adventure across India awaits. Where will you explore?</div>
+      <div class="hero-actions">
+        <a href="create-trip.html" class="btn btn-primary btn-lg">🗺️ Plan New Trip</a>
+        <a href="city-search.html" class="btn btn-secondary btn-lg">🔍 Explore Cities</a>
+      </div>
+      <div class="hero-float" id="hero-float">
+        <div class="hero-float-card"><div class="hero-float-val gradient-text" id="stat-trips">0</div><div class="hero-float-lbl">Trips Planned</div></div>
+        <div class="hero-float-card"><div class="hero-float-val gradient-text" id="stat-cities">0</div><div class="hero-float-lbl">Cities</div></div>
+      </div>
+    </div>
+
+    <!-- STATS ROW -->
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-icon">✈️</div><div class="stat-value gradient-text" id="s1">0</div><div class="stat-label">Total Trips</div></div>
+      <div class="stat-card"><div class="stat-icon">🏙️</div><div class="stat-value gradient-text" id="s2">0</div><div class="stat-label">Cities Explored</div></div>
+      <div class="stat-card"><div class="stat-icon">🎯</div><div class="stat-value gradient-text" id="s3">0</div><div class="stat-label">Activities Done</div></div>
+      <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-value gradient-text" id="s4">₹0</div><div class="stat-label">Total Budgeted</div></div>
+    </div>
+
+    <!-- UPCOMING TRIPS -->
+    <div class="section-header">
+      <div><div class="section-title">✈️ Upcoming Trips</div><div class="section-sub">Your next adventures</div></div>
+      <a href="my-trips.html" class="btn btn-ghost btn-sm">View all →</a>
+    </div>
+    <div class="section-divider"></div>
+    <div class="trip-grid" id="trips-grid">
+      <div class="skeleton" style="height:280px;border-radius:var(--radius)"></div>
+      <div class="skeleton" style="height:280px;border-radius:var(--radius)"></div>
+    </div>
+
+    <div style="height:36px"></div>
+
+    <!-- EXPLORE INDIA -->
+    <div class="section-header">
+      <div><div class="section-title">🌏 Explore India</div><div class="section-sub">Handpicked destinations for you</div></div>
+      <a href="city-search.html" class="btn btn-ghost btn-sm">All destinations →</a>
+    </div>
+    <div class="section-divider"></div>
+    <div class="grid-4" id="cities-grid"></div>
+
+    <div style="height:36px"></div>
+
+    <!-- TRAVEL SUGGESTIONS + QUICK ACTIONS -->
+    <div class="grid-2">
+      <div class="smart-widget">
+        <div class="smart-widget-header">
+          <div class="smart-orb-sm">✨</div>
+          <div>
+            <div style="font-size:15px;font-weight:700">Travel Suggestions</div>
+            <div style="font-size:12px;color:var(--text-muted)">Personalized just for you</div>
+          </div>
+        </div>
+        <div id="smart-tips"></div>
+        <button onclick="refreshTips()" class="btn btn-secondary btn-sm" style="width:100%;justify-content:center;margin-top:8px">✨ Refresh Suggestions</button>
+      </div>
+      <div>
+        <div class="section-title" style="margin-bottom:16px">⚡ Quick Actions</div>
+        <div style="display:flex;flex-direction:column;gap:10px" id="quick-actions"></div>
+      </div>
+    </div>
+
+    <div style="height:48px"></div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+<script src="db.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  if(!Auth.require()) return;
+  seedData();
+  const user = Auth.currentUser();
+
+  // Nav
+  document.getElementById('nav-placeholder').innerHTML = buildNav('dashboard');
+  document.getElementById('topbar-placeholder').innerHTML = buildTopbar('Dashboard');
+
+  // Hero
+  const hour = new Date().getHours();
+  const greet = hour<12?'Good Morning':'hour<18'?'Good Afternoon':'Good Evening';
+  document.querySelector('.hero-greeting').textContent = `🌅 ${hour<12?'Good Morning':hour<18?'Good Afternoon':'Good Evening'}, ${user.name.split(' ')[0]}!`;
+  document.getElementById('hero-name').textContent = `Where to next, ${user.name.split(' ')[0]}?`;
+
+  // Trips
+  const trips = DB.where('trips', t => t.userId === user.id);
+  const upcoming = trips.filter(t=>t.status==='upcoming');
+  const completed = trips.filter(t=>t.status==='completed');
+
+  // Stats animation
+  animateNum('s1', trips.length);
+  animateNum('s2', [...new Set(trips.flatMap(t=>t.cityIds||[]))].length || user.citiesVisited);
+  animateNum('s3', DB.where('stops',s=>trips.map(t=>t.id).includes(s.tripId)).reduce((a,s)=>a+(s.activities||[]).length,0) || 8);
+  const totalBudget = trips.reduce((a,t)=>a+(t.budget||0),0);
+  document.getElementById('s4').textContent = fmt.currency(totalBudget);
+  document.getElementById('stat-trips').textContent = trips.length;
+  document.getElementById('stat-cities').textContent = [...new Set(trips.flatMap(t=>t.cityIds||[]))].length || user.citiesVisited;
+
+  function animateNum(id, target) {
+    const el = document.getElementById(id); let cur=0;
+    const step = Math.ceil(target/30);
+    const timer = setInterval(()=>{ cur=Math.min(cur+step,target); el.textContent=cur; if(cur>=target)clearInterval(timer); },40);
+  }
+
+  // Trips grid
+  const tg = document.getElementById('trips-grid');
+  const showTrips = upcoming.slice(0,4);
+  if(!showTrips.length) {
+    tg.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🧳</div><div class="empty-title">No upcoming trips</div><div class="empty-sub">Plan your first adventure across India!</div><a href="create-trip.html" class="btn btn-primary" style="margin-top:16px">Plan a Trip</a></div>`;
+  } else {
+    tg.innerHTML = showTrips.map(trip => {
+      const stops = DB.where('stops',s=>s.tripId===trip.id);
+      const cities = (trip.cityIds||[]).slice(0,3).map(id=>CITIES.find(c=>c.id===id)?.name||'').filter(Boolean);
+      return `<a href="itinerary.html?id=${trip.id}" class="trip-card">
+        <div class="trip-img">
+          <img src="${trip.cover||''}" alt="${trip.name}" onerror="this.style.display='none'" loading="lazy">
+          <div class="trip-img-overlay"></div>
+          <div class="trip-img-badge"><span class="badge badge-${trip.status==='upcoming'?'cyan':'green'}">${trip.status==='upcoming'?'🔵 Upcoming':'✅ Completed'}</span></div>
+          <div class="trip-img-cities">${cities.map(c=>`<span class="trip-city-pill">📍 ${c}</span>`).join('')}</div>
+        </div>
+        <div class="trip-body">
+          <div class="trip-name">${trip.name}</div>
+          <div class="trip-meta">
+            <span>📅 ${fmt.date(trip.startDate)}</span>
+            <span>👥 ${trip.travelers} pax</span>
+            <span>🚆 ${trip.transport}</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${Math.round(Math.random()*60+20)}%"></div></div>
+          <div class="trip-footer" style="margin-top:12px">
+            <div class="trip-budget">${fmt.currency(trip.budget)}</div>
+            <span class="badge badge-purple">${stops.length} stops</span>
+          </div>
+        </div>
+      </a>`;
+    }).join('');
+  }
+
+  // Cities grid
+  const featured = [...CITIES].sort(()=>0.5-Math.random()).slice(0,8);
+  document.getElementById('cities-grid').innerHTML = featured.map(c=>`
+    <a href="city-search.html?city=${c.id}" class="city-card">
+      ${imgTag(c.img,c.name,'city-card-img-wrap')}
+      <div class="city-card-overlay"></div>
+      <div class="city-card-body">
+        <div class="city-card-name">${c.name}</div>
+        <div class="city-card-state">${c.state}</div>
+      </div>
+      <div class="city-card-tag"><span class="badge badge-purple">${c.tag}</span></div>
+    </a>`).join('');
+  // Fix image layout for city cards
+  document.querySelectorAll('.city-card-img-wrap').forEach(w=>{
+    w.style.cssText='position:absolute;inset:0;width:100%;height:100%';
+    const img=w.querySelector('img'); if(img){img.style.cssText='width:100%;height:100%;object-fit:cover';}
+    const fb=w.querySelector('.thumb-fallback'); if(fb){fb.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;';}
+  });
+
+  // AI Tips
+  const tips = [
+    {icon:'🌿',text:'Best time to visit Munnar: September to May. Monsoon brings lush green views but roads can be tricky.'},
+    {icon:'🏛️',text:'Visit Meenakshi Temple, Madurai at dawn — fewer crowds and magical golden light on the gopuram.'},
+    {icon:'🚢',text:'Book Alleppey houseboat at least 2 weeks ahead for peak season (Oct-March). Avg cost ₹8,000/night.'},
+    {icon:'🍛',text:'Chennai\'s Mylai is a food lover\'s paradise. Try Kari Dosa and Filter Coffee for the authentic experience.'},
+    {icon:'🏜️',text:'Jaisalmer desert camps: choose sunset + overnight packages for the most magical stargazing experience.'},
+    {icon:'🚂',text:'The Nilgiri Toy Train from Mettupalayam to Ooty is a UNESCO heritage ride — book 30 days in advance!'},
+    {icon:'💰',text:'Travel to hill stations like Ooty in weekdays — 30% cheaper hotels and 60% fewer tourists.'},
+    {icon:'🌅',text:'Udaipur\'s Lake Pichola boat rides are best at 6PM — sunset turns the palace walls golden.'},
+  ];
+  let tipIdx=0;
+  function refreshTips(){
+    const idxs=Array.from({length:3},()=>(tipIdx++)%tips.length);
+    document.getElementById('smart-tips').innerHTML=idxs.map(i=>`
+      <div class="smart-tip"><span style="font-size:20px">${tips[i].icon}</span><span>${tips[i].text}</span></div>`).join('');
+  }
+  refreshTips();
+
+  // Quick actions
+  const actions=[
+    {icon:'✈️',label:'Plan New Trip',sub:'Start your next adventure',href:'create-trip.html',color:'var(--purple)'},
+    {icon:'🔍',label:'Explore Cities',sub:'Discover 26+ destinations',href:'city-search.html',color:'var(--cyan)'},
+    {icon:'📊',label:'Budget Tracker',sub:'View your spending analytics',href:'budget.html',color:'#34d399'},
+    {icon:'✅',label:'Packing Checklist',sub:'Never forget essentials',href:'checklist.html',color:'#fb923c'},
+  ];
+  document.getElementById('quick-actions').innerHTML=actions.map(a=>`
+    <a href="${a.href}" class="card" style="display:flex;align-items:center;gap:16px;padding:16px;text-decoration:none;color:inherit">
+      <div style="width:44px;height:44px;border-radius:12px;background:${a.color}22;border:1px solid ${a.color}44;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${a.icon}</div>
+      <div><div style="font-weight:700;font-size:14px">${a.label}</div><div style="font-size:12px;color:var(--text-muted)">${a.sub}</div></div>
+      <span style="margin-left:auto;color:var(--text-muted)">→</span>
+    </a>`).join('');
+});
+</script>
+</body>
+</html>

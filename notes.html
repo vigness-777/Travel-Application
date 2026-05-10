@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Trip Journal | Traveloop</title>
+  <link rel="stylesheet" href="globals.css">
+  <style>
+    .notes-layout { display:grid; grid-template-columns:1fr 340px; gap:24px; align-items:start; }
+    .note-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:16px; transition:var(--transition); position:relative; animation:fadeInUp 0.4s ease both; }
+    .note-card:hover { border-color:var(--border-bright); box-shadow:var(--glow-card); }
+    .note-header { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+    .note-type-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+    .note-content { font-size:14px; color:var(--text-secondary); line-height:1.65; margin-bottom:12px; }
+    .note-footer { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .note-meta { font-size:11px; color:var(--text-muted); display:flex; align-items:center; gap:6px; }
+    .note-del { margin-left:auto; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:15px; opacity:0; transition:var(--transition); }
+    .note-card:hover .note-del { opacity:1; }
+    .note-del:hover { color:#f87171; }
+
+    .note-type-tip { background:rgba(34,211,238,0.12); }
+    .note-type-experience { background:rgba(139,92,246,0.12); }
+    .note-type-food { background:rgba(251,146,60,0.12); }
+    .note-type-reminder { background:rgba(248,113,113,0.12); }
+
+    .compose-card { background:var(--black3); border:1px solid rgba(139,92,246,0.2); border-radius:var(--radius); padding:20px; position:sticky; top:80px; }
+    .compose-type-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
+    .type-btn { padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border); background:transparent; cursor:pointer; text-align:center; transition:var(--transition); }
+    .type-btn.active { border-color:var(--purple); background:rgba(139,92,246,0.12); }
+    .type-btn:hover { border-color:var(--border-bright); }
+    .type-btn-icon { font-size:20px; display:block; margin-bottom:4px; }
+    .type-btn-lbl { font-size:11px; font-weight:600; color:var(--text-secondary); }
+
+    .timeline-note { position:relative; padding-left:28px; border-left:2px solid rgba(139,92,246,0.3); margin-bottom:24px; }
+    .timeline-note-dot { position:absolute; left:-7px; top:8px; width:12px; height:12px; border-radius:50%; background:var(--purple); border:2px solid var(--black); }
+    .day-label { font-size:12px; font-weight:700; color:var(--purple-light); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:10px; }
+    .empty-notes { display:flex; flex-direction:column; align-items:center; gap:12px; padding:60px 24px; text-align:center; }
+  </style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+<div id="nav-placeholder"></div>
+<div class="page-layout">
+  <div id="topbar-placeholder"></div>
+  <div class="page-content">
+    <div class="section-header" style="margin-bottom:20px">
+      <div><div class="section-title">📔 Trip Journal</div><div class="section-sub">Your travel memories and reminders</div></div>
+      <select id="trip-select" class="form-select" style="width:240px" onchange="loadNotes(this.value)"><option value="">Select trip…</option></select>
+    </div>
+
+    <div class="notes-layout">
+      <!-- LEFT: NOTES FEED -->
+      <div>
+        <div id="filter-row" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
+          <button class="chip active" onclick="setFilter('all',this)">All</button>
+          <button class="chip" onclick="setFilter('experience',this)">✨ Experiences</button>
+          <button class="chip" onclick="setFilter('food',this)">🍛 Food</button>
+          <button class="chip" onclick="setFilter('tip',this)">💡 Tips</button>
+          <button class="chip" onclick="setFilter('reminder',this)">🔔 Reminders</button>
+        </div>
+        <div id="notes-feed"></div>
+      </div>
+
+      <!-- RIGHT: COMPOSE -->
+      <div class="compose-card">
+        <div style="font-size:15px;font-weight:700;margin-bottom:14px">✍️ New Journal Entry</div>
+        <div class="form-group">
+          <label class="form-label">Note Type</label>
+          <div class="compose-type-grid" id="type-grid">
+            <button class="type-btn active" onclick="setType('experience',this)"><span class="type-btn-icon">✨</span><span class="type-btn-lbl">Experience</span></button>
+            <button class="type-btn" onclick="setType('food',this)"><span class="type-btn-icon">🍛</span><span class="type-btn-lbl">Food</span></button>
+            <button class="type-btn" onclick="setType('tip',this)"><span class="type-btn-icon">💡</span><span class="type-btn-lbl">Travel Tip</span></button>
+            <button class="type-btn" onclick="setType('reminder',this)"><span class="type-btn-icon">🔔</span><span class="type-btn-lbl">Reminder</span></button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Day</label>
+          <select id="note-day" class="form-select">
+            <option value="1">Day 1</option><option value="2">Day 2</option><option value="3">Day 3</option>
+            <option value="4">Day 4</option><option value="5">Day 5</option><option value="6">Day 6</option>
+            <option value="7">Day 7</option><option value="8">Day 8</option><option value="9">Day 9</option>
+            <option value="10">Day 10</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">City</label>
+          <input type="text" id="note-city" class="form-input" placeholder="Which city?">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Time</label>
+          <input type="time" id="note-time" class="form-input" value="10:00">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Your Note</label>
+          <textarea id="note-content" class="form-textarea" style="min-height:120px" placeholder="Write your experience, tip, or reminder here…"></textarea>
+        </div>
+        <button onclick="addNote()" class="btn btn-primary" style="width:100%;justify-content:center">Save Entry</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast-container" id="toast-container"></div>
+<script src="db.js"></script>
+<script>
+const TYPE_CONFIG={experience:{icon:'✨',color:'rgba(139,92,246,0.12)',label:'Experience'},food:{icon:'🍛',color:'rgba(251,146,60,0.12)',label:'Food & Dining'},tip:{icon:'💡',color:'rgba(34,211,238,0.12)',label:'Travel Tip'},reminder:{icon:'🔔',color:'rgba(248,113,113,0.12)',label:'Reminder'}};
+let currentTripId=null, noteFilter='all', noteType='experience';
+
+document.addEventListener('DOMContentLoaded',()=>{
+  if(!Auth.require()) return;
+  seedData();
+  document.getElementById('nav-placeholder').innerHTML=buildNav('notes');
+  document.getElementById('topbar-placeholder').innerHTML=buildTopbar('Trip Journal');
+  const user=Auth.currentUser();
+  const trips=DB.where('trips',t=>t.userId===user.id);
+  const sel=document.getElementById('trip-select');
+  trips.forEach(t=>{ const o=document.createElement('option'); o.value=t.id; o.textContent=t.name; sel.appendChild(o); });
+  const urlId=new URLSearchParams(location.search).get('id');
+  if(urlId){ sel.value=urlId; loadNotes(urlId); }
+  else if(trips.length){ sel.value=trips[0].id; loadNotes(trips[0].id); }
+});
+
+function loadNotes(tripId) {
+  currentTripId=tripId;
+  const trip=DB.findById('trips',tripId);
+  if(trip){ document.getElementById('note-city').value=DB.where('stops',s=>s.tripId===tripId)[0]?.cityName||''; }
+  render();
+}
+
+function render() {
+  let notes=currentTripId?DB.where('notes',n=>n.tripId===currentTripId):[];
+  if(noteFilter!=='all') notes=notes.filter(n=>n.type===noteFilter);
+  notes.sort((a,b)=>a.day-b.day||(a.time>b.time?1:-1));
+  const feed=document.getElementById('notes-feed');
+  if(!notes.length){
+    feed.innerHTML=`<div class="empty-notes"><div style="font-size:48px">📔</div><div style="font-size:16px;font-weight:700;color:var(--text-secondary)">No journal entries yet</div><div style="font-size:13px;color:var(--text-muted)">Use the panel on the right to log your first memory!</div></div>`;
+    return;
+  }
+  // Group by day
+  const byDay={};
+  notes.forEach(n=>{ if(!byDay[n.day]) byDay[n.day]=[]; byDay[n.day].push(n); });
+  feed.innerHTML=Object.entries(byDay).map(([day,dayNotes])=>`
+    <div class="timeline-note">
+      <div class="timeline-note-dot"></div>
+      <div class="day-label">📅 Day ${day} · ${dayNotes[0]?.city||''}</div>
+      ${dayNotes.map((n,i)=>{
+        const tc=TYPE_CONFIG[n.type]||TYPE_CONFIG.experience;
+        return `<div class="note-card" style="animation-delay:${i*0.1}s">
+          <div class="note-header">
+            <div class="note-type-icon note-type-${n.type}" style="background:${tc.color}">${tc.icon}</div>
+            <div>
+              <div style="font-size:13px;font-weight:700">${tc.label}</div>
+              <div style="font-size:11px;color:var(--text-muted)">⏰ ${n.time||'--:--'}</div>
+            </div>
+            <button class="note-del" onclick="deleteNote('${n.id}')">🗑️</button>
+          </div>
+          <div class="note-content">${n.content}</div>
+          <div class="note-footer">
+            <span class="badge badge-purple">Day ${n.day}</span>
+            ${n.city?`<span class="badge badge-cyan">📍 ${n.city}</span>`:''}
+            <span style="font-size:11px;color:var(--text-muted);margin-left:auto">${new Date(n.createdAt).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`).join('');
+}
+
+function setFilter(f,btn) {
+  noteFilter=f;
+  document.querySelectorAll('#filter-row .chip').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function setType(type,btn) {
+  noteType=type;
+  document.querySelectorAll('#type-grid .type-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function addNote() {
+  if(!currentTripId){showToast('Select a trip first','error');return;}
+  const content=document.getElementById('note-content').value.trim();
+  if(!content){showToast('Write something first!','error');return;}
+  DB.insert('notes',{
+    tripId:currentTripId, type:noteType,
+    day:parseInt(document.getElementById('note-day').value),
+    city:document.getElementById('note-city').value.trim(),
+    time:document.getElementById('note-time').value,
+    content,
+  });
+  document.getElementById('note-content').value='';
+  showToast('Journal entry saved ✅');
+  render();
+}
+
+function deleteNote(id) {
+  DB.delete('notes',id);
+  showToast('Note deleted');
+  render();
+}
+</script>
+</body>
+</html>

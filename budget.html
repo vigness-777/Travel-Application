@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Budget Analytics | Traveloop</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="globals.css">
+  <style>
+    .budget-hero { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:16px; margin-bottom:28px; }
+    .budget-hero-card { background:var(--grad-card); border:1px solid rgba(139,92,246,0.2); border-radius:var(--radius); padding:22px; text-align:center; }
+    .budget-hero-val { font-size:28px; font-weight:800; font-family:'Space Grotesk',sans-serif; }
+    .budget-hero-lbl { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-top:4px; }
+    .chart-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:24px; }
+    .chart-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:22px; }
+    .chart-title { font-size:15px; font-weight:700; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+    .chart-canvas-wrap { position:relative; height:260px; }
+    .expense-list { display:flex; flex-direction:column; gap:10px; }
+    .expense-row { display:flex; align-items:center; gap:12px; padding:12px 14px; background:rgba(255,255,255,0.03); border-radius:var(--radius-sm); border:1px solid var(--border); }
+    .expense-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+    .expense-name { flex:1; font-size:13px; font-weight:600; }
+    .expense-amt { font-size:14px; font-weight:800; }
+    .expense-pct { font-size:11px; color:var(--text-muted); min-width:36px; text-align:right; }
+    .expense-bar-mini { height:3px; border-radius:2px; margin-top:4px; }
+    .alert-card { border-radius:var(--radius); padding:18px; display:flex; align-items:flex-start; gap:14px; margin-bottom:16px; }
+    .alert-card.over { background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); }
+    .alert-card.ok { background:rgba(52,211,153,0.08); border:1px solid rgba(52,211,153,0.25); }
+    .trip-select-bar { display:flex; align-items:center; gap:12px; margin-bottom:24px; flex-wrap:wrap; }
+    .daily-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:14px; margin-bottom:24px; }
+    .daily-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:16px; text-align:center; transition:var(--transition); }
+    .daily-card:hover { border-color:var(--border-bright); background:var(--card-hover); }
+    .daily-day { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; }
+    .daily-val { font-size:20px; font-weight:800; font-family:'Space Grotesk',sans-serif; }
+    .daily-city { font-size:11px; color:var(--text-muted); margin-top:4px; }
+    @media(max-width:900px){ .budget-hero{grid-template-columns:1fr 1fr;} .chart-grid{grid-template-columns:1fr;} }
+    @media(max-width:600px){ .budget-hero{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+<div id="nav-placeholder"></div>
+<div class="page-layout">
+  <div id="topbar-placeholder"></div>
+  <div class="page-content">
+
+    <div class="section-header" style="margin-bottom:20px">
+      <div><div class="section-title">📊 Budget Analytics</div><div class="section-sub">Smart expense insights for your trips</div></div>
+    </div>
+
+    <div class="trip-select-bar">
+      <div style="font-size:13px;font-weight:600;color:var(--text-muted)">Analyzing:</div>
+      <select id="trip-selector" class="form-select" style="width:280px" onchange="loadTrip(this.value)">
+        <option value="">Select a trip…</option>
+      </select>
+    </div>
+
+    <!-- Alert -->
+    <div id="budget-alert" style="display:none"></div>
+
+    <!-- Hero stats -->
+    <div class="budget-hero" id="budget-hero">
+      <div class="budget-hero-card"><div class="budget-hero-val gradient-text" id="bh-budget">₹0</div><div class="budget-hero-lbl">Total Budget</div></div>
+      <div class="budget-hero-card"><div class="budget-hero-val gradient-text" id="bh-spent">₹0</div><div class="budget-hero-lbl">Planned Spend</div></div>
+      <div class="budget-hero-card"><div class="budget-hero-val" id="bh-remaining" style="color:#34d399">₹0</div><div class="budget-hero-lbl">Remaining</div></div>
+      <div class="budget-hero-card"><div class="budget-hero-val" id="bh-pct" class="gradient-text">0%</div><div class="budget-hero-lbl">Budget Used</div></div>
+    </div>
+
+    <!-- Charts -->
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">🥧 Expense Distribution</div>
+        <div class="chart-canvas-wrap"><canvas id="pieChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">📊 Cost by Stop (₹)</div>
+        <div class="chart-canvas-wrap"><canvas id="barChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Expense breakdown list -->
+    <div class="card" style="margin-bottom:24px">
+      <div class="chart-title">💳 Expense Categories</div>
+      <div class="expense-list" id="expense-list"></div>
+    </div>
+
+    <!-- Daily spending -->
+    <div class="section-header"><div class="section-title">📅 Daily Spending Estimate</div></div>
+    <div style="height:12px"></div>
+    <div class="daily-grid" id="daily-grid"></div>
+
+  </div>
+</div>
+<div class="toast-container" id="toast-container"></div>
+<script src="db.js"></script>
+<script>
+let pieChart=null, barChart=null;
+const COLORS=['#8b5cf6','#22d3ee','#34d399','#f59e0b','#f87171','#ec4899'];
+
+document.addEventListener('DOMContentLoaded',()=>{
+  if(!Auth.require()) return;
+  seedData();
+  document.getElementById('nav-placeholder').innerHTML=buildNav('budget');
+  document.getElementById('topbar-placeholder').innerHTML=buildTopbar('Budget Analytics');
+
+  const user=Auth.currentUser();
+  const trips=DB.where('trips',t=>t.userId===user.id);
+  const sel=document.getElementById('trip-selector');
+  trips.forEach(t=>{ const o=document.createElement('option'); o.value=t.id; o.textContent=t.name; sel.appendChild(o); });
+
+  // Load from URL or first trip
+  const urlId=new URLSearchParams(location.search).get('id');
+  if(urlId){ sel.value=urlId; loadTrip(urlId); }
+  else if(trips.length){ sel.value=trips[0].id; loadTrip(trips[0].id); }
+});
+
+function loadTrip(tripId) {
+  if(!tripId) return;
+  const trip=DB.findById('trips',tripId);
+  if(!trip) return;
+  const stops=DB.where('stops',s=>s.tripId===tripId).sort((a,b)=>a.order-b.order);
+  const hotel=stops.reduce((a,s)=>a+(s.hotelCost||0),0);
+  const transport=stops.reduce((a,s)=>a+(s.transportCost||0),0);
+  const food=stops.reduce((a,s)=>a+(s.foodCost||0),0);
+  const activities=stops.reduce((a,s)=>a+(s.activityCost||0),0);
+  const total=hotel+transport+food+activities;
+  const budget=trip.budget||1;
+  const pct=Math.round(total/budget*100);
+  const remaining=budget-total;
+
+  // Hero stats with animation
+  animateVal('bh-budget',budget,'₹');
+  animateVal('bh-spent',total,'₹');
+  document.getElementById('bh-remaining').textContent=fmt.currency(remaining);
+  document.getElementById('bh-remaining').style.color=remaining<0?'#f87171':'#34d399';
+  document.getElementById('bh-pct').textContent=`${pct}%`;
+
+  // Alert
+  const alertEl=document.getElementById('budget-alert');
+  if(pct>90){ alertEl.style.display='block'; alertEl.innerHTML=`<div class="alert-card over"><span style="font-size:24px">⚠️</span><div><div style="font-weight:700;margin-bottom:4px">Over Budget Alert</div><div style="font-size:13px;color:var(--text-secondary)">You've planned ₹${Math.abs(remaining).toLocaleString('en-IN')} ${remaining<0?'over':'near'} your budget. Consider reducing hotel or activity costs.</div></div></div>`; }
+  else { alertEl.style.display='block'; alertEl.innerHTML=`<div class="alert-card ok"><span style="font-size:24px">✅</span><div><div style="font-weight:700;margin-bottom:4px">Budget on Track</div><div style="font-size:13px;color:var(--text-secondary)">Great! You have ₹${remaining.toLocaleString('en-IN')} remaining in your budget.</div></div></div>`; }
+
+  // Pie chart
+  const cats=[{label:'Hotels',val:hotel,color:COLORS[0]},{label:'Transport',val:transport,color:COLORS[1]},{label:'Food',val:food,color:COLORS[2]},{label:'Activities',val:activities,color:COLORS[3]}];
+  if(pieChart) pieChart.destroy();
+  pieChart=new Chart(document.getElementById('pieChart'),{
+    type:'doughnut',
+    data:{labels:cats.map(c=>c.label),datasets:[{data:cats.map(c=>c.val),backgroundColor:cats.map(c=>c.color),borderColor:'transparent',borderWidth:0,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'rgba(241,240,255,0.7)',padding:16,font:{size:12}}},tooltip:{callbacks:{label:(ctx)=>`${ctx.label}: ₹${ctx.parsed.toLocaleString('en-IN')}`}}},cutout:'65%'}
+  });
+
+  // Bar chart
+  if(barChart) barChart.destroy();
+  barChart=new Chart(document.getElementById('barChart'),{
+    type:'bar',
+    data:{
+      labels:stops.map(s=>s.cityName),
+      datasets:[
+        {label:'Hotel',data:stops.map(s=>s.hotelCost||0),backgroundColor:COLORS[0]+'bb',borderRadius:6},
+        {label:'Transport',data:stops.map(s=>s.transportCost||0),backgroundColor:COLORS[1]+'bb',borderRadius:6},
+        {label:'Food',data:stops.map(s=>s.foodCost||0),backgroundColor:COLORS[2]+'bb',borderRadius:6},
+        {label:'Activities',data:stops.map(s=>s.activityCost||0),backgroundColor:COLORS[3]+'bb',borderRadius:6},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true,ticks:{color:'rgba(241,240,255,0.5)'},grid:{color:'rgba(255,255,255,0.04)'}},y:{stacked:true,ticks:{color:'rgba(241,240,255,0.5)',callback:v=>'₹'+v.toLocaleString('en-IN')},grid:{color:'rgba(255,255,255,0.06)'}}},plugins:{legend:{labels:{color:'rgba(241,240,255,0.7)',font:{size:11}}}}}
+  });
+
+  // Expense breakdown list
+  const ICONS={Hotels:'🏨',Transport:'🚌',Food:'🍛',Activities:'🎯'};
+  document.getElementById('expense-list').innerHTML=cats.map(c=>`
+    <div class="expense-row">
+      <div class="expense-dot" style="background:${c.color}"></div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+          <span>${ICONS[c.label]||'💰'}</span>
+          <span class="expense-name">${c.label}</span>
+          <span class="expense-amt" style="color:${c.color}">${fmt.currency(c.val)}</span>
+          <span class="expense-pct">${total?Math.round(c.val/total*100):0}%</span>
+        </div>
+        <div class="expense-bar-mini" style="background:rgba(255,255,255,0.06)"><div style="height:100%;border-radius:2px;background:${c.color};width:${total?Math.round(c.val/total*100):0}%;transition:width 1s ease"></div></div>
+      </div>
+    </div>`).join('');
+
+  // Daily spending
+  const totalDays=stops.reduce((a,s)=>a+(s.days||1),0)||1;
+  const dailyAvg=Math.round(total/totalDays);
+  let dayNum=1;
+  document.getElementById('daily-grid').innerHTML=stops.flatMap(s=>{
+    const stopCost=(s.hotelCost||0)+(s.transportCost||0)+(s.foodCost||0)+(s.activityCost||0);
+    const dailyCost=Math.round(stopCost/Math.max(1,s.days));
+    return Array.from({length:s.days},()=>{
+      const d=`<div class="daily-card"><div class="daily-day">Day ${dayNum++}</div><div class="daily-val gradient-text">${fmt.currency(dailyCost)}</div><div class="daily-city">${s.cityName}</div></div>`;
+      return d;
+    });
+  }).join('');
+}
+
+function animateVal(id, target, prefix='') {
+  const el=document.getElementById(id);
+  let start=0; const step=target/40;
+  const t=setInterval(()=>{ start=Math.min(start+step,target); el.textContent=prefix+'₹'.includes(prefix)?fmt.currency(Math.round(start)):Math.round(start); if(start>=target)clearInterval(t); },30);
+  if(prefix==='₹') { const t2=setInterval(()=>{ start=Math.min(start+step,target); el.textContent=fmt.currency(Math.round(start)); if(start>=target)clearInterval(t2); },30); }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Shared Trip | Traveloop</title>
+  <link rel="stylesheet" href="globals.css">
+  <style>
+    .share-hero { height:320px; border-radius:var(--radius-lg); overflow:hidden; position:relative; margin-bottom:28px; }
+    .share-hero img { width:100%; height:100%; object-fit:cover; }
+    .share-hero-overlay { position:absolute; inset:0; background:linear-gradient(to top,rgba(5,5,8,1) 0%,rgba(5,5,8,0.2) 70%,transparent); }
+    .share-hero-content { position:absolute; bottom:0; left:0; right:0; padding:32px; }
+    .public-badge { display:inline-flex; align-items:center; gap:6px; background:rgba(52,211,153,0.15); border:1px solid rgba(52,211,153,0.35); border-radius:20px; padding:5px 14px; font-size:12px; font-weight:600; color:#34d399; margin-bottom:12px; }
+    .share-actions { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:24px; }
+    .share-btn-big { display:flex; align-items:center; gap:10px; padding:12px 20px; border-radius:var(--radius-sm); font-size:14px; font-weight:600; cursor:pointer; border:none; transition:var(--transition); }
+    .copy-btn { background:var(--grad-main); color:#fff; box-shadow:0 4px 20px rgba(139,92,246,0.3); }
+    .copy-btn:hover { transform:translateY(-2px); box-shadow:0 8px 30px rgba(139,92,246,0.5); }
+    .wa-btn { background:rgba(37,211,102,0.15); color:#25d366; border:1px solid rgba(37,211,102,0.3); }
+    .wa-btn:hover { background:rgba(37,211,102,0.25); }
+    .tw-btn { background:rgba(29,161,242,0.15); color:#1da1f2; border:1px solid rgba(29,161,242,0.3); }
+    .tw-btn:hover { background:rgba(29,161,242,0.25); }
+
+    .readonly-stop { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:20px; transition:var(--transition); }
+    .readonly-stop:hover { border-color:var(--border-bright); }
+    .ro-banner { height:140px; position:relative; overflow:hidden; }
+    .ro-banner img { width:100%; height:100%; object-fit:cover; }
+    .ro-banner-overlay { position:absolute; inset:0; background:linear-gradient(to top,rgba(5,5,8,0.95),transparent 50%); }
+    .ro-banner-content { position:absolute; bottom:0; left:0; right:0; padding:14px 16px; display:flex; justify-content:space-between; align-items:flex-end; }
+    .ro-body { padding:16px; }
+    .ro-activity-row { display:flex; align-items:center; gap:10px; font-size:13px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+    .ro-activity-row:last-child { border:none; }
+  </style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+<div id="nav-placeholder"></div>
+<div class="page-layout">
+  <div id="topbar-placeholder"></div>
+  <div class="page-content">
+
+    <div class="share-hero" id="share-hero">
+      <img id="hero-img" src="" alt="Trip" onerror="this.style.display='none'">
+      <div class="share-hero-overlay"></div>
+      <div class="share-hero-content">
+        <div class="public-badge">🌍 Public Itinerary</div>
+        <div style="font-size:26px;font-weight:800;margin-bottom:8px" id="trip-title">Loading…</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.6)" id="trip-meta"></div>
+      </div>
+    </div>
+
+    <div class="share-actions">
+      <button class="share-btn-big copy-btn" onclick="copyLink()">🔗 Copy Trip Link</button>
+      <button class="share-btn-big wa-btn" onclick="shareWA()">💬 Share on WhatsApp</button>
+      <button class="share-btn-big tw-btn" onclick="shareTW()">🐦 Share on Twitter</button>
+      <button class="share-btn-big" style="background:var(--card);border:1px solid var(--border)" onclick="cloneTrip()">📋 Clone This Trip</button>
+      <a href="" id="edit-link" class="share-btn-big btn btn-ghost">✏️ Edit Plan</a>
+    </div>
+
+    <div class="grid-2" style="margin-bottom:24px">
+      <div class="card-glow">
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">Created by</div>
+        <div style="font-size:15px;font-weight:700" id="creator-name">-</div>
+      </div>
+      <div class="card-glow">
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">Trip Stats</div>
+        <div style="font-size:13px" id="trip-stats">-</div>
+      </div>
+    </div>
+
+    <div class="section-header"><div class="section-title">🗺️ Complete Itinerary</div></div>
+    <div style="height:12px"></div>
+    <div id="readonly-stops"></div>
+  </div>
+</div>
+<div class="toast-container" id="toast-container"></div>
+<script src="db.js"></script>
+<script>
+let trip=null;
+
+document.addEventListener('DOMContentLoaded',()=>{
+  seedData();
+  document.getElementById('nav-placeholder').innerHTML=buildNav('shared');
+  document.getElementById('topbar-placeholder').innerHTML=buildTopbar('Shared Itinerary');
+  const params=new URLSearchParams(location.search);
+  const tripId=params.get('id');
+  if(!tripId){ loadFirstTrip(); return; }
+  trip=DB.findById('trips',tripId);
+  if(!trip){ loadFirstTrip(); return; }
+  loadTripData();
+});
+
+function loadFirstTrip() {
+  const user=Auth.currentUser();
+  if(user){ const trips=DB.where('trips',t=>t.userId===user.id); if(trips.length){ trip=trips[0]; loadTripData(); return; } }
+  document.getElementById('trip-title').textContent='No trips to share yet';
+}
+
+function loadTripData() {
+  document.getElementById('hero-img').src=trip.cover||'';
+  document.getElementById('trip-title').textContent=trip.name;
+  document.getElementById('trip-meta').innerHTML=`📅 ${fmt.date(trip.startDate)} → ${fmt.date(trip.endDate)} · 👥 ${trip.travelers} travelers · 🚆 ${trip.transport}`;
+  document.getElementById('edit-link').href=`itinerary.html?id=${trip.id}`;
+  const user=DB.findById('users',trip.userId)||Auth.currentUser();
+  document.getElementById('creator-name').textContent=user?user.name:'Anonymous Explorer';
+  const stops=DB.where('stops',s=>s.tripId===trip.id).sort((a,b)=>a.order-b.order);
+  const totalCost=stops.reduce((a,s)=>a+(s.hotelCost||0)+(s.transportCost||0)+(s.foodCost||0)+(s.activityCost||0),0);
+  const totalDays=stops.reduce((a,s)=>a+(s.days||0),0);
+  const totalActs=stops.reduce((a,s)=>a+(s.activities||[]).length,0);
+  document.getElementById('trip-stats').innerHTML=`${stops.length} stops · ${totalDays} days · ${totalActs} activities · ${fmt.currency(totalCost)} estimated`;
+
+  if(!stops.length){
+    document.getElementById('readonly-stops').innerHTML=`<div class="empty-state"><div class="empty-icon">🗺️</div><div class="empty-title">No stops yet</div><div class="empty-sub">The itinerary hasn't been built yet</div></div>`;
+    return;
+  }
+
+  document.getElementById('readonly-stops').innerHTML=stops.map((s,i)=>{
+    const city=CITIES.find(c=>c.id===s.cityId)||{name:s.cityName,img:'',state:''};
+    const acts=(s.activities||[]).map(id=>ACTIVITIES.find(a=>a.id===id)).filter(Boolean);
+    const totalCost=(s.hotelCost||0)+(s.transportCost||0)+(s.foodCost||0)+(s.activityCost||0);
+    return `<div class="readonly-stop">
+      <div class="ro-banner">
+        <img src="${city.img}" alt="${city.name}" onerror="this.style.display='none'" loading="lazy">
+        <div class="ro-banner-overlay"></div>
+        <div class="ro-banner-content">
+          <div><div style="font-size:18px;font-weight:800">${city.name}</div><div style="font-size:12px;color:rgba(255,255,255,0.5)">${city.state} · ${s.days} day${s.days!==1?'s':''}</div></div>
+          <span class="badge badge-purple">Stop ${i+1}</span>
+        </div>
+      </div>
+      <div class="ro-body">
+        <div class="ro-activity-row" style="border-bottom:1px solid rgba(255,255,255,0.04)">
+          <span style="font-size:16px">🏨</span>
+          <span style="font-weight:600;flex:1">Hotel Accommodation</span>
+          <span style="color:var(--cyan);font-weight:700">${fmt.currency(s.hotelCost||0)}</span>
+        </div>
+        ${acts.map(a=>`
+        <div class="ro-activity-row">
+          <span style="font-size:16px">${a.icon}</span>
+          <div style="flex:1"><div style="font-weight:600">${a.name}</div><div style="font-size:11px;color:var(--text-muted)">${a.category} · ${a.duration}h</div></div>
+          <span style="color:var(--cyan);font-weight:700">${a.cost===0?'Free':fmt.currency(a.cost)}</span>
+        </div>`).join('')}
+        <div style="display:flex;justify-content:space-between;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+          <span style="font-size:12px;color:var(--text-muted)">Stop total</span>
+          <span style="font-size:15px;font-weight:800" class="gradient-text">${fmt.currency(totalCost)}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function copyLink() {
+  const url=location.href;
+  navigator.clipboard.writeText(url).then(()=>showToast('Link copied to clipboard! 🔗')).catch(()=>{
+    const t=document.createElement('textarea'); t.value=url; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); showToast('Link copied! 🔗');
+  });
+}
+
+function shareWA() { window.open(`https://wa.me/?text=${encodeURIComponent('Check out my India travel plan: '+trip?.name+' '+location.href)}`,'_blank'); }
+function shareTW() { window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('Planning my India trip: '+trip?.name)}&url=${encodeURIComponent(location.href)}`,'_blank'); }
+
+function cloneTrip() {
+  if(!Auth.currentUser()){showToast('Please login to clone','error');return;}
+  if(!trip) return;
+  const newTrip=DB.insert('trips',{...trip,id:undefined,createdAt:undefined,name:trip.name+' (Copy)',userId:Auth.currentUser().id,status:'upcoming'});
+  const stops=DB.where('stops',s=>s.tripId===trip.id);
+  stops.forEach(s=>DB.insert('stops',{...s,id:undefined,createdAt:undefined,tripId:newTrip.id}));
+  showToast('Trip cloned to your account! ✅');
+  setTimeout(()=>window.location.href=`itinerary.html?id=${newTrip.id}`,1200);
+}
+</script>
+</body>
+</html>

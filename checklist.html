@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Packing List | Traveloop</title>
+  <link rel="stylesheet" href="globals.css">
+  <style>
+    .checklist-layout { display:grid; grid-template-columns:300px 1fr; gap:24px; align-items:start; }
+    .progress-ring-wrap { display:flex; flex-direction:column; align-items:center; gap:8px; padding:28px; }
+    .ring-svg { transform:rotate(-90deg); }
+    .ring-bg { fill:none; stroke:var(--border); stroke-width:8; }
+    .ring-fill { fill:none; stroke-width:8; stroke-linecap:round; transition:stroke-dashoffset 0.8s ease; }
+    .ring-text { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; }
+    .ring-pct { font-size:28px; font-weight:800; font-family:'Space Grotesk',sans-serif; }
+    .ring-lbl { font-size:11px; color:var(--text-muted); }
+    .ring-wrap { position:relative; display:inline-flex; }
+
+    .cat-block { margin-bottom:28px; }
+    .cat-header { display:flex; align-items:center; gap:12px; margin-bottom:14px; padding:10px 14px; background:var(--grad-card); border-radius:var(--radius-sm); border:1px solid rgba(139,92,246,0.2); }
+    .cat-title { font-size:14px; font-weight:700; flex:1; }
+    .cat-count { font-size:12px; color:var(--text-muted); }
+    .check-item { display:flex; align-items:center; gap:12px; padding:12px 14px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:8px; transition:var(--transition); cursor:pointer; user-select:none; }
+    .check-item:hover { border-color:var(--border-bright); background:var(--card-hover); }
+    .check-item.packed { opacity:0.55; }
+    .check-item.packed .item-name { text-decoration:line-through; }
+    .check-box { width:22px; height:22px; border-radius:6px; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:var(--transition); background:transparent; }
+    .check-item.packed .check-box { background:var(--grad-main); border-color:transparent; box-shadow:0 2px 8px rgba(139,92,246,0.3); }
+    .check-icon { font-size:16px; opacity:0; transition:var(--transition); }
+    .check-item.packed .check-icon { opacity:1; }
+    .item-name { font-size:14px; font-weight:500; transition:var(--transition); }
+    .del-btn { margin-left:auto; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:16px; opacity:0; transition:var(--transition); }
+    .check-item:hover .del-btn { opacity:1; }
+    .del-btn:hover { color:#f87171; }
+
+    .add-item-form { display:flex; gap:8px; margin-top:8px; }
+    .add-item-form input { flex:1; }
+    .add-item-form select { width:140px; }
+
+    .stat-pills { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px; }
+    .stat-pill { background:var(--card); border:1px solid var(--border); border-radius:20px; padding:8px 16px; font-size:13px; }
+    .stat-pill strong { font-weight:800; margin-right:4px; }
+
+    @keyframes checkPop { 0%{transform:scale(1)} 50%{transform:scale(1.25)} 100%{transform:scale(1)} }
+    .popped { animation:checkPop 0.25s ease; }
+    @media(max-width:900px){ .checklist-layout{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+<div id="nav-placeholder"></div>
+<div class="page-layout">
+  <div id="topbar-placeholder"></div>
+  <div class="page-content">
+    <div class="section-header" style="margin-bottom:16px">
+      <div><div class="section-title">✅ Packing Checklist</div><div class="section-sub">Never forget essentials again</div></div>
+      <div style="display:flex;gap:8px">
+        <select id="trip-select" class="form-select" style="width:220px" onchange="loadChecklist(this.value)"><option value="">Select trip…</option></select>
+        <button onclick="clearPacked()" class="btn btn-ghost btn-sm">Clear Packed</button>
+      </div>
+    </div>
+
+    <div class="stat-pills" id="stat-pills">
+      <div class="stat-pill"><strong class="gradient-text" id="sp-total">0</strong> Total items</div>
+      <div class="stat-pill"><strong style="color:#34d399" id="sp-packed">0</strong> Packed</div>
+      <div class="stat-pill"><strong style="color:#f87171" id="sp-left">0</strong> Remaining</div>
+    </div>
+
+    <div class="checklist-layout">
+      <!-- LEFT -->
+      <div>
+        <div class="card" style="text-align:center;margin-bottom:16px">
+          <div class="progress-ring-wrap">
+            <div class="ring-wrap">
+              <svg width="140" height="140" class="ring-svg">
+                <circle class="ring-bg" cx="70" cy="70" r="56"/>
+                <circle class="ring-fill" cx="70" cy="70" r="56" id="ring-circle" stroke="url(#ringGrad)" stroke-dasharray="351.86" stroke-dashoffset="351.86"/>
+                <defs>
+                  <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:#8b5cf6"/>
+                    <stop offset="100%" style="stop-color:#22d3ee"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div class="ring-text">
+                <div class="ring-pct gradient-text" id="ring-pct">0%</div>
+                <div class="ring-lbl">Packed</div>
+              </div>
+            </div>
+            <div style="font-size:14px;font-weight:600" id="ring-msg">Start packing! 🧳</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="font-size:14px;font-weight:700;margin-bottom:14px">➕ Add Item</div>
+          <div class="add-item-form">
+            <input type="text" id="new-item" class="form-input" placeholder="Item name…" onkeydown="if(event.key==='Enter')addItem()">
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <select id="new-cat" class="form-select" style="flex:1">
+              <option value="Documents">📄 Documents</option>
+              <option value="Clothes" selected>👕 Clothes</option>
+              <option value="Electronics">📱 Electronics</option>
+              <option value="Essentials">🧴 Essentials</option>
+              <option value="Medicines">💊 Medicines</option>
+              <option value="Other">📦 Other</option>
+            </select>
+            <button onclick="addItem()" class="btn btn-primary">Add</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: CHECKLIST -->
+      <div id="checklist-body">
+        <div class="empty-state"><div class="empty-icon">🧳</div><div class="empty-title">Select a trip</div><div class="empty-sub">Choose a trip above to view its packing list</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast-container" id="toast-container"></div>
+<script src="db.js"></script>
+<script>
+const CAT_ICONS={Documents:'📄',Clothes:'👕',Electronics:'📱',Essentials:'🧴',Medicines:'💊',Other:'📦'};
+let currentTripId=null;
+
+document.addEventListener('DOMContentLoaded',()=>{
+  if(!Auth.require()) return;
+  seedData();
+  document.getElementById('nav-placeholder').innerHTML=buildNav('checklist');
+  document.getElementById('topbar-placeholder').innerHTML=buildTopbar('Packing List');
+  const user=Auth.currentUser();
+  const trips=DB.where('trips',t=>t.userId===user.id);
+  const sel=document.getElementById('trip-select');
+  trips.forEach(t=>{ const o=document.createElement('option'); o.value=t.id; o.textContent=t.name; sel.appendChild(o); });
+  const urlId=new URLSearchParams(location.search).get('id');
+  if(urlId&&trips.find(t=>t.id===urlId)){ sel.value=urlId; loadChecklist(urlId); }
+  else if(trips.length){ sel.value=trips[0].id; loadChecklist(trips[0].id); }
+});
+
+function loadChecklist(tripId) {
+  currentTripId=tripId;
+  if(!tripId) return;
+  render();
+}
+
+function render() {
+  const items=DB.where('checklist',c=>c.tripId===currentTripId);
+  const packed=items.filter(i=>i.packed).length;
+  const total=items.length;
+  const pct=total?Math.round(packed/total*100):0;
+  document.getElementById('sp-total').textContent=total;
+  document.getElementById('sp-packed').textContent=packed;
+  document.getElementById('sp-left').textContent=total-packed;
+  document.getElementById('ring-pct').textContent=`${pct}%`;
+  const circ=351.86; document.getElementById('ring-circle').style.strokeDashoffset=circ-(circ*pct/100);
+  const msgs=['Start packing! 🧳','Good start! 📦','Keep going! 💪','Almost there! 🔥','You\'re ready! 🎉'];
+  document.getElementById('ring-msg').textContent=msgs[Math.floor(pct/25)];
+
+  const cats=[...new Set(items.map(i=>i.category))];
+  if(!items.length){
+    document.getElementById('checklist-body').innerHTML=`<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">No items yet</div><div class="empty-sub">Add your first packing item on the left</div></div>`;
+    return;
+  }
+  document.getElementById('checklist-body').innerHTML=Object.entries(
+    items.reduce((acc,i)=>{ (acc[i.category]=acc[i.category]||[]).push(i); return acc; },{})
+  ).map(([cat,catItems])=>`
+    <div class="cat-block">
+      <div class="cat-header">
+        <span style="font-size:18px">${CAT_ICONS[cat]||'📦'}</span>
+        <span class="cat-title">${cat}</span>
+        <span class="cat-count">${catItems.filter(i=>i.packed).length}/${catItems.length}</span>
+        <div class="progress-bar" style="width:80px;margin-left:8px"><div class="progress-fill" style="width:${catItems.length?Math.round(catItems.filter(i=>i.packed).length/catItems.length*100):0}%"></div></div>
+      </div>
+      ${catItems.map(item=>`
+      <div class="check-item ${item.packed?'packed':''}" id="ci-${item.id}" onclick="toggleItem('${item.id}')">
+        <div class="check-box"><span class="check-icon">✓</span></div>
+        <span class="item-name">${item.item}</span>
+        <button class="del-btn" onclick="event.stopPropagation();deleteItem('${item.id}')">🗑️</button>
+      </div>`).join('')}
+    </div>`).join('');
+}
+
+function toggleItem(id) {
+  const item=DB.findById('checklist',id);
+  if(!item) return;
+  DB.update('checklist',id,{packed:!item.packed});
+  const el=document.getElementById(`ci-${id}`);
+  if(el){el.classList.toggle('packed');el.querySelector('.check-box').classList.add('popped');setTimeout(()=>el.querySelector('.check-box')?.classList.remove('popped'),300);}
+  render();
+  if(!item.packed) showToast('Item packed! ✅');
+}
+
+function deleteItem(id) {
+  DB.delete('checklist',id);
+  showToast('Item removed');
+  render();
+}
+
+function addItem() {
+  const name=document.getElementById('new-item').value.trim();
+  const cat=document.getElementById('new-cat').value;
+  if(!name){showToast('Enter an item name','error');return;}
+  if(!currentTripId){showToast('Select a trip first','error');return;}
+  DB.insert('checklist',{tripId:currentTripId,category:cat,item:name,packed:false});
+  document.getElementById('new-item').value='';
+  showToast(`${name} added to checklist ✅`);
+  render();
+}
+
+function clearPacked() {
+  const packed=DB.where('checklist',c=>c.tripId===currentTripId&&c.packed);
+  packed.forEach(i=>DB.delete('checklist',i.id));
+  showToast(`${packed.length} packed items cleared`);
+  render();
+}
+</script>
+</body>
+</html>

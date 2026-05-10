@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Activities | Traveloop</title>
+  <link rel="stylesheet" href="globals.css">
+  <style>
+    .act-hero { background:var(--grad-hero); border-radius:var(--radius-lg); padding:32px; margin-bottom:24px; border:1px solid rgba(34,211,238,0.2); position:relative; overflow:hidden; }
+    .act-hero::before { content:'🎯'; position:absolute; right:32px; top:50%; transform:translateY(-50%); font-size:120px; opacity:0.07; }
+    .filter-sidebar { position:sticky; top:80px; }
+    .filter-block { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:16px; }
+    .filter-block-title { font-size:13px; font-weight:700; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+    .filter-option { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:var(--radius-sm); cursor:pointer; transition:var(--transition); }
+    .filter-option:hover { background:rgba(139,92,246,0.08); }
+    .filter-option input[type=checkbox] { accent-color:var(--purple); width:15px; height:15px; }
+    .filter-option label { font-size:13px; cursor:pointer; flex:1; }
+    .price-range { display:flex; gap:8px; align-items:center; }
+    .price-input { width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:8px; color:var(--text-primary); font-size:13px; padding:8px 12px; outline:none; }
+    .price-input:focus { border-color:var(--purple); }
+
+    .act-card-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:20px; }
+    .act-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; transition:var(--transition); position:relative; overflow:hidden; }
+    .act-card::before { content:''; position:absolute; top:0; right:0; width:100px; height:100px; border-radius:50%; transform:translate(30px,-30px); }
+    .act-card:hover { transform:translateY(-4px); box-shadow:var(--glow-card); border-color:var(--border-bright); }
+    .act-card-icon { font-size:40px; margin-bottom:12px; display:block; }
+    .act-card-name { font-size:16px; font-weight:700; margin-bottom:6px; }
+    .act-card-cat { display:inline-flex; align-items:center; gap:5px; margin-bottom:10px; }
+    .act-card-meta { display:flex; gap:12px; flex-wrap:wrap; font-size:12px; color:var(--text-muted); margin-bottom:14px; }
+    .act-card-rating { display:flex; align-items:center; gap:4px; }
+    .stars { color:#f59e0b; }
+    .act-card-footer { display:flex; align-items:center; justify-content:space-between; }
+    .act-price { font-size:18px; font-weight:800; }
+    .add-act-btn { border-radius:10px; }
+    .add-act-btn.added { background:rgba(52,211,153,0.15) !important; color:#34d399 !important; border-color:rgba(52,211,153,0.4) !important; }
+
+    .acts-layout { display:grid; grid-template-columns:260px 1fr; gap:24px; align-items:start; }
+    @media(max-width:900px){ .acts-layout{grid-template-columns:1fr;} .filter-sidebar{position:static;} }
+  </style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+<div id="nav-placeholder"></div>
+<div class="page-layout">
+  <div id="topbar-placeholder"></div>
+  <div class="page-content">
+
+    <div class="act-hero">
+      <div style="font-size:13px;color:var(--cyan);font-weight:600;letter-spacing:0.05em;margin-bottom:6px">🎯 ACTIVITIES</div>
+      <div style="font-size:24px;font-weight:800;margin-bottom:8px">Find <span class="gradient-text">Experiences</span> Across India</div>
+      <div style="font-size:14px;color:var(--text-muted);margin-bottom:18px">18 curated activities — from desert safaris to temple tours</div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <input type="text" id="act-search" class="form-input" style="max-width:320px" placeholder="🔍 Search activities…" oninput="applyFilters()">
+        <div class="badge badge-cyan" id="act-count">18 activities</div>
+      </div>
+    </div>
+
+    <div class="acts-layout">
+      <!-- FILTERS -->
+      <div class="filter-sidebar">
+        <div class="filter-block">
+          <div class="filter-block-title">🏷️ Category</div>
+          <div id="cat-filters"></div>
+        </div>
+        <div class="filter-block">
+          <div class="filter-block-title">⏱️ Duration</div>
+          <div class="filter-option"><input type="radio" name="dur" value="all" id="dur-all" checked onchange="applyFilters()"><label for="dur-all">Any duration</label></div>
+          <div class="filter-option"><input type="radio" name="dur" value="short" id="dur-s" onchange="applyFilters()"><label for="dur-s">Short (&lt;3h)</label></div>
+          <div class="filter-option"><input type="radio" name="dur" value="half" id="dur-h" onchange="applyFilters()"><label for="dur-h">Half day (3-5h)</label></div>
+          <div class="filter-option"><input type="radio" name="dur" value="full" id="dur-f" onchange="applyFilters()"><label for="dur-f">Full day (5h+)</label></div>
+        </div>
+        <div class="filter-block">
+          <div class="filter-block-title">💰 Max Budget (₹)</div>
+          <div class="price-range">
+            <input type="number" id="max-price" class="price-input" placeholder="e.g. 2000" onchange="applyFilters()">
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:8px">Leave blank for no limit</div>
+        </div>
+        <button onclick="resetFilters()" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:4px">Reset Filters</button>
+      </div>
+
+      <!-- GRID -->
+      <div id="acts-grid" class="act-card-grid"></div>
+    </div>
+  </div>
+</div>
+<div class="toast-container" id="toast-container"></div>
+<script src="db.js"></script>
+<script>
+const CAT_COLORS={Adventure:'var(--purple)',Culture:'var(--cyan)',Nature:'#34d399',Food:'#fb923c',Wildlife:'#f59e0b',Shopping:'#ec4899',Wellness:'#a78bfa'};
+let activeCats=new Set(), addedActivities=new Set();
+
+document.addEventListener('DOMContentLoaded',()=>{
+  if(!Auth.require()) return;
+  seedData();
+  document.getElementById('nav-placeholder').innerHTML=buildNav('activities');
+  document.getElementById('topbar-placeholder').innerHTML=buildTopbar('Activities');
+  renderCatFilters();
+  applyFilters();
+});
+
+function renderCatFilters() {
+  const cats=[...new Set(ACTIVITIES.map(a=>a.category))];
+  document.getElementById('cat-filters').innerHTML=cats.map(c=>`
+    <div class="filter-option">
+      <input type="checkbox" id="cat-${c}" value="${c}" onchange="toggleCat('${c}')">
+      <label for="cat-${c}" style="display:flex;align-items:center;gap:6px;width:100%">
+        <div style="width:8px;height:8px;border-radius:50%;background:${CAT_COLORS[c]||'var(--purple)'}"></div>${c}
+      </label>
+    </div>`).join('');
+}
+
+function toggleCat(cat) {
+  if(activeCats.has(cat)) activeCats.delete(cat);
+  else activeCats.add(cat);
+  applyFilters();
+}
+
+function applyFilters() {
+  let acts=[...ACTIVITIES];
+  const q=document.getElementById('act-search').value.toLowerCase();
+  const dur=document.querySelector('input[name=dur]:checked')?.value||'all';
+  const maxP=parseInt(document.getElementById('max-price').value)||Infinity;
+  if(q) acts=acts.filter(a=>a.name.toLowerCase().includes(q)||a.category.toLowerCase().includes(q));
+  if(activeCats.size) acts=acts.filter(a=>activeCats.has(a.category));
+  if(dur==='short') acts=acts.filter(a=>a.duration<3);
+  else if(dur==='half') acts=acts.filter(a=>a.duration>=3&&a.duration<=5);
+  else if(dur==='full') acts=acts.filter(a=>a.duration>5);
+  if(maxP<Infinity) acts=acts.filter(a=>a.cost<=maxP);
+  document.getElementById('act-count').textContent=`${acts.length} activities`;
+  renderActs(acts);
+}
+
+function resetFilters() {
+  activeCats.clear();
+  document.querySelectorAll('#cat-filters input').forEach(i=>i.checked=false);
+  document.getElementById('act-search').value='';
+  document.getElementById('dur-all').checked=true;
+  document.getElementById('max-price').value='';
+  applyFilters();
+}
+
+function renderActs(acts) {
+  const grid=document.getElementById('acts-grid');
+  if(!acts.length){
+    grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🎯</div><div class="empty-title">No activities found</div><div class="empty-sub">Try different filters</div></div>`;
+    return;
+  }
+  const stars=(r)=>'★'.repeat(Math.round(r))+'☆'.repeat(5-Math.round(r));
+  grid.innerHTML=acts.map(a=>{
+    const color=CAT_COLORS[a.category]||'var(--purple)';
+    const isAdded=addedActivities.has(a.id);
+    return `<div class="act-card" style="--act-color:${color}">
+      <span class="act-card-icon">${a.icon}</span>
+      <div class="act-card-name">${a.name}</div>
+      <div class="act-card-cat"><span class="badge" style="background:${color}22;color:${color};border-color:${color}44">${a.category}</span></div>
+      <div class="act-card-meta">
+        <span>⏱️ ${a.duration}h</span>
+        <div class="act-card-rating"><span class="stars">${stars(a.rating)}</span><span style="margin-left:4px">${a.rating}</span></div>
+      </div>
+      <div class="act-card-footer">
+        <div class="act-price ${a.cost===0?'gradient-text':''}">${a.cost===0?'Free':'₹'+a.cost.toLocaleString('en-IN')}</div>
+        <button id="act-btn-${a.id}" onclick="addToItinerary('${a.id}')" class="btn btn-primary btn-sm add-act-btn ${isAdded?'added':''}">${isAdded?'✓ Added':'+ Add to Trip'}</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function addToItinerary(actId) {
+  const trips=DB.where('trips',t=>t.userId===Auth.currentUser().id&&t.status==='upcoming');
+  if(!trips.length){ showToast('Create a trip first!','error'); setTimeout(()=>window.location.href='create-trip.html',1500); return; }
+  const trip=trips[0];
+  const stops=DB.where('stops',s=>s.tripId===trip.id);
+  if(!stops.length){ showToast('Add cities to your trip first!','error'); setTimeout(()=>window.location.href=`itinerary.html?id=${trip.id}`,1500); return; }
+  const stop=stops[0]; const act=ACTIVITIES.find(a=>a.id===actId);
+  if((stop.activities||[]).includes(actId)){ showToast(`${act.name} already added!`,'error'); return; }
+  DB.update('stops',stop.id,{activities:[...(stop.activities||[]),actId],activityCost:(stop.activityCost||0)+act.cost});
+  addedActivities.add(actId);
+  const btn=document.getElementById(`act-btn-${actId}`);
+  if(btn){ btn.textContent='✓ Added'; btn.classList.add('added'); }
+  showToast(`${act.name} added to "${trip.name}" ✅`);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Traveloop — Plan Your India</title>
+  <meta name="description" content="Traveloop: India's smartest travel planning platform. Book trips, itineraries & more.">
+  <link rel="stylesheet" href="globals.css">
+  <style>
+    body { display:flex; min-height:100vh; overflow:hidden; }
+
+    /* ══════════════════════════════════════════
+       HERO / LEFT PANEL
+    ══════════════════════════════════════════ */
+    .hero-panel {
+      flex:1; position:relative; overflow:hidden;
+      display:flex; flex-direction:column;
+    }
+
+    /* Destination slideshow bg */
+    .hero-bg {
+      position:absolute; inset:0;
+      background:url('https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?w=1400&q=80&auto=format&fit=crop') center/cover;
+      animation:bgZoom 18s ease-in-out infinite alternate;
+    }
+    @keyframes bgZoom { from{transform:scale(1)} to{transform:scale(1.06)} }
+    .hero-overlay {
+      position:absolute; inset:0;
+      background:linear-gradient(to right, rgba(10,10,15,0.72) 0%, rgba(10,10,15,0.3) 100%),
+                 linear-gradient(to top, rgba(10,10,15,0.95) 0%, transparent 50%);
+    }
+
+    /* Top nav bar feel */
+    .hero-nav {
+      position:relative; z-index:2;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:24px 36px;
+    }
+    .hero-nav-logo { display:flex; align-items:center; gap:10px; text-decoration:none; }
+    .hero-nav-logo-icon {
+      width:38px; height:38px; border-radius:10px;
+      background:var(--grad-main);
+      display:flex; align-items:center; justify-content:center;
+      font-size:18px; box-shadow:var(--glow-v);
+    }
+    .hero-nav-logo-text { font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:800; background:var(--grad-main); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+
+    /* Trust pills */
+    .hero-trust { display:flex; gap:8px; }
+    .trust-pill {
+      background:rgba(255,255,255,0.08); backdrop-filter:blur(10px);
+      border:1px solid rgba(255,255,255,0.12); border-radius:20px;
+      padding:5px 13px; font-size:11.5px; font-weight:500; color:rgba(255,255,255,0.75);
+    }
+
+    /* Main hero content */
+    .hero-body {
+      position:relative; z-index:2; flex:1;
+      display:flex; flex-direction:column; justify-content:flex-end;
+      padding:0 36px 44px;
+    }
+
+    /* Destination tags strip (like MMT) */
+    .dest-strip { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:22px; }
+    .dest-tag {
+      display:flex; align-items:center; gap:6px;
+      background:rgba(0,0,0,0.4); backdrop-filter:blur(12px);
+      border:1px solid rgba(255,255,255,0.12); border-radius:8px;
+      padding:7px 13px; font-size:12.5px; font-weight:500;
+      text-decoration:none; color:rgba(255,255,255,0.82);
+      transition:var(--transition); cursor:pointer;
+    }
+    .dest-tag:hover { background:rgba(108,71,255,0.25); border-color:rgba(108,71,255,0.5); color:#fff; }
+    .dest-tag-icon { font-size:16px; }
+
+    .hero-headline {
+      font-size:40px; font-weight:800; line-height:1.14;
+      margin-bottom:12px; letter-spacing:-0.5px;
+    }
+    .hero-headline .hl { background:var(--grad-main); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .hero-sub { font-size:14.5px; color:rgba(255,255,255,0.52); max-width:420px; line-height:1.65; margin-bottom:28px; }
+
+    /* Stats row — MakeMyTrip style trust numbers */
+    .hero-stats-row { display:flex; gap:0; }
+    .hero-stat {
+      display:flex; flex-direction:column;
+      padding:14px 20px;
+      background:rgba(0,0,0,0.45); backdrop-filter:blur(14px);
+      border:1px solid rgba(255,255,255,0.08);
+    }
+    .hero-stat:first-child { border-radius:12px 0 0 12px; }
+    .hero-stat:last-child  { border-radius:0 12px 12px 0; }
+    .hero-stat + .hero-stat { border-left:none; }
+    .hero-stat-val { font-size:20px; font-weight:800; font-family:'Space Grotesk',sans-serif; color:#fff; }
+    .hero-stat-val span { background:var(--grad-main); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .hero-stat-lbl { font-size:10.5px; color:rgba(255,255,255,0.38); margin-top:2px; text-transform:uppercase; letter-spacing:0.06em; }
+
+    /* ══════════════════════════════════════════
+       AUTH / RIGHT PANEL
+    ══════════════════════════════════════════ */
+    .auth-panel {
+      width:430px; min-width:430px;
+      background:var(--black2);
+      display:flex; flex-direction:column;
+      border-left:1px solid var(--border);
+      position:relative; overflow-y:auto;
+    }
+
+    /* Brand strip top */
+    .auth-brand-strip {
+      background:rgba(108,71,255,0.08);
+      border-bottom:1px solid rgba(108,71,255,0.15);
+      padding:14px 36px;
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .auth-brand-name { font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; background:var(--grad-main); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .auth-brand-tag { font-size:11px; color:var(--text-muted); }
+
+    .auth-body { flex:1; display:flex; align-items:center; justify-content:center; padding:36px; }
+    .auth-card { width:100%; }
+
+    /* Section label like MMT's "Login or Create Account" */
+    .auth-section-lbl {
+      font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase;
+      color:var(--text-muted); margin-bottom:20px;
+      display:flex; align-items:center; gap:10px;
+    }
+    .auth-section-lbl::after { content:''; flex:1; height:1px; background:var(--border); }
+
+    .auth-title { font-size:24px; font-weight:800; margin-bottom:5px; letter-spacing:-0.2px; }
+    .auth-sub { font-size:13px; color:var(--text-muted); margin-bottom:22px; }
+
+    .tab-indicator {
+      display:flex; background:var(--card);
+      border:1px solid var(--border); border-radius:var(--radius-sm);
+      padding:4px; margin-bottom:22px;
+    }
+    .tab-indicator button {
+      flex:1; padding:8px; border-radius:8px; font-size:13px; font-weight:600;
+      cursor:pointer; border:none; background:none; color:var(--text-secondary); transition:var(--transition);
+    }
+    .tab-indicator button.active { background:var(--grad-main); color:#fff; box-shadow:0 2px 10px rgba(108,71,255,0.35); }
+
+    .social-btns { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:18px; }
+    .social-btn {
+      display:flex; align-items:center; justify-content:center; gap:7px;
+      padding:10px; border-radius:var(--radius-sm); background:rgba(255,255,255,0.04);
+      border:1px solid var(--border); font-size:12.5px; font-weight:600; cursor:pointer;
+      transition:var(--transition); color:var(--text-primary);
+    }
+    .social-btn:hover { background:rgba(108,71,255,0.08); border-color:var(--border-v); }
+
+    .or-divider { display:flex; align-items:center; gap:10px; margin-bottom:18px; }
+    .or-divider span { font-size:11.5px; color:var(--text-muted); white-space:nowrap; }
+    .or-divider::before,.or-divider::after { content:''; flex:1; height:1px; background:var(--border); }
+
+    .forgot-link { font-size:11.5px; color:var(--violet-l); text-decoration:none; float:right; }
+    .forgot-link:hover { text-decoration:underline; }
+    .auth-switch { text-align:center; margin-top:18px; font-size:13px; color:var(--text-muted); }
+    .auth-switch a { color:var(--violet-l); font-weight:600; text-decoration:none; cursor:pointer; }
+    .auth-switch a:hover { text-decoration:underline; }
+
+    .input-wrap { position:relative; }
+    .input-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); font-size:14px; }
+    .input-wrap .form-input { padding-left:38px; }
+    .pass-toggle { position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:14px; transition:var(--transition); }
+    .pass-toggle:hover { color:var(--text-primary); }
+
+    .error-msg {
+      background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.25);
+      border-radius:var(--radius-sm); padding:9px 13px; font-size:12px; color:#f87171;
+      margin-bottom:13px; display:none;
+    }
+
+    .submit-btn {
+      width:100%; justify-content:center; margin-top:4px;
+      background:var(--grad-main); color:#fff; font-size:14px; font-weight:700;
+      padding:12px; border-radius:var(--radius-sm); border:none; cursor:pointer;
+      transition:var(--transition); box-shadow:0 4px 16px rgba(108,71,255,0.4);
+      display:flex; align-items:center; gap:8px;
+    }
+    .submit-btn:hover { transform:translateY(-2px); box-shadow:0 8px 26px rgba(108,71,255,0.52); }
+    .submit-btn:disabled { opacity:0.6; cursor:not-allowed; transform:none; }
+
+    /* Bottom perks strip — like MMT's "Why us" */
+    .auth-perks {
+      border-top:1px solid var(--border);
+      padding:16px 36px;
+      display:flex; gap:0;
+    }
+    .auth-perk {
+      flex:1; text-align:center;
+      padding:10px 8px;
+      border-right:1px solid var(--border);
+    }
+    .auth-perk:last-child { border-right:none; }
+    .auth-perk-icon { font-size:20px; margin-bottom:4px; }
+    .auth-perk-lbl { font-size:10.5px; color:var(--text-muted); font-weight:500; line-height:1.3; }
+
+    @media(max-width:900px){ .hero-panel{display:none;} .auth-panel{width:100%;min-width:unset;} }
+  </style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+
+<!-- ═══ HERO PANEL ═══ -->
+<div class="hero-panel">
+  <div class="hero-bg"></div>
+  <div class="hero-overlay"></div>
+
+  <!-- Nav -->
+  <div class="hero-nav">
+    <a class="hero-nav-logo" href="index.html">
+      <div class="hero-nav-logo-icon">✈️</div>
+      <div class="hero-nav-logo-text">Traveloop</div>
+    </a>
+    <div class="hero-trust">
+      <div class="trust-pill">🌟 4.8★ Rated</div>
+      <div class="trust-pill">🛡️ Secure Booking</div>
+      <div class="trust-pill">🇮🇳 India's #1 Planner</div>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="hero-body">
+    <!-- Popular destinations strip -->
+    <div class="dest-strip">
+      <div class="dest-tag"><span class="dest-tag-icon">🏛️</span> Madurai</div>
+      <div class="dest-tag"><span class="dest-tag-icon">🌿</span> Munnar</div>
+      <div class="dest-tag"><span class="dest-tag-icon">🏜️</span> Jaisalmer</div>
+      <div class="dest-tag"><span class="dest-tag-icon">🏖️</span> Goa</div>
+      <div class="dest-tag"><span class="dest-tag-icon">🏔️</span> Manali</div>
+      <div class="dest-tag"><span class="dest-tag-icon">🕌</span> Agra</div>
+      <div class="dest-tag"><span class="dest-tag-icon">🛕</span> Varanasi</div>
+    </div>
+
+    <div class="hero-headline">
+      Plan Smarter.<br>Travel <span class="hl">Deeper.</span>
+    </div>
+    <div class="hero-sub">
+      Smart itineraries, budgets & personalized routes across 26+ incredible Indian destinations.
+    </div>
+
+    <!-- Stats row -->
+    <div class="hero-stats-row">
+      <div class="hero-stat">
+        <div class="hero-stat-val"><span>2.4L+</span></div>
+        <div class="hero-stat-lbl">Trips Planned</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-val"><span>26+</span></div>
+        <div class="hero-stat-lbl">Destinations</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-val"><span>₹4.2k</span></div>
+        <div class="hero-stat-lbl">Avg Savings</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-val"><span>4.8★</span></div>
+        <div class="hero-stat-lbl">User Rating</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ AUTH PANEL ═══ -->
+<div class="auth-panel">
+
+  <!-- Brand strip -->
+  <div class="auth-brand-strip">
+    <div>
+      <div class="auth-brand-name">Traveloop</div>
+      <div class="auth-brand-tag">India's Smartest Travel Planner</div>
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);text-align:right">
+      <div>🔒 Secured</div>
+    </div>
+  </div>
+
+  <div class="auth-body">
+    <div class="auth-card">
+      <div class="auth-section-lbl">Your Account</div>
+
+      <div class="tab-indicator">
+        <button class="active" id="tab-login" onclick="switchTab('login')">Sign In</button>
+        <button id="tab-signup" onclick="switchTab('signup')">Create Account</button>
+      </div>
+
+      <!-- ── LOGIN ── -->
+      <div id="form-login">
+        <div class="auth-title">Welcome back 👋</div>
+        <div class="auth-sub">Sign in to continue planning your journeys</div>
+
+        <div class="social-btns">
+          <button class="social-btn" onclick="showToast('Google login — UI demo','success')"><span>🇬</span> Google</button>
+          <button class="social-btn" onclick="showToast('Apple login — UI demo','success')"><span>🍎</span> Apple</button>
+        </div>
+        <div class="or-divider"><span>or with email</span></div>
+
+        <div id="login-error" class="error-msg"></div>
+        <form onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <div class="input-wrap">
+              <span class="input-icon">📧</span>
+              <input type="email" id="login-email" class="form-input" placeholder="you@example.com" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password <a href="#" class="forgot-link" onclick="showToast('Reset link sent!','success')">Forgot password?</a></label>
+            <div class="input-wrap">
+              <span class="input-icon">🔑</span>
+              <input type="password" id="login-password" class="form-input" placeholder="••••••••" required>
+              <button type="button" class="pass-toggle" onclick="togglePass('login-password',this)">👁️</button>
+            </div>
+          </div>
+          <button type="submit" class="submit-btn" id="login-btn">Sign In →</button>
+        </form>
+        <div class="auth-switch">New to Traveloop? <a onclick="switchTab('signup')">Create free account</a></div>
+      </div>
+
+      <!-- ── SIGNUP ── -->
+      <div id="form-signup" style="display:none">
+        <div class="auth-title">Join Traveloop ✈️</div>
+        <div class="auth-sub">Create your free account and start exploring India</div>
+        <div id="signup-error" class="error-msg"></div>
+        <form onsubmit="handleSignup(event)">
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <div class="input-wrap">
+              <span class="input-icon">👤</span>
+              <input type="text" id="signup-name" class="form-input" placeholder="Your name" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <div class="input-wrap">
+              <span class="input-icon">📧</span>
+              <input type="email" id="signup-email" class="form-input" placeholder="you@example.com" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <div class="input-wrap">
+              <span class="input-icon">🔑</span>
+              <input type="password" id="signup-password" class="form-input" placeholder="Min. 6 characters" required minlength="6">
+              <button type="button" class="pass-toggle" onclick="togglePass('signup-password',this)">👁️</button>
+            </div>
+          </div>
+          <button type="submit" class="submit-btn">Create Account →</button>
+        </form>
+        <div class="auth-switch">Already have an account? <a onclick="switchTab('login')">Sign in</a></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Perks strip -->
+  <div class="auth-perks">
+    <div class="auth-perk">
+      <div class="auth-perk-icon">💰</div>
+      <div class="auth-perk-lbl">Smart Budgets</div>
+    </div>
+    <div class="auth-perk">
+      <div class="auth-perk-icon">🗺️</div>
+      <div class="auth-perk-lbl">26+ Cities</div>
+    </div>
+    <div class="auth-perk">
+      <div class="auth-perk-icon">🔒</div>
+      <div class="auth-perk-lbl">Secure & Free</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+<script src="db.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    seedData();
+    if(Auth.currentUser()) window.location.href='dashboard.html';
+  });
+
+  function switchTab(t) {
+    document.getElementById('form-login').style.display  = t==='login'  ? 'block' : 'none';
+    document.getElementById('form-signup').style.display = t==='signup' ? 'block' : 'none';
+    document.getElementById('tab-login').className  = t==='login'  ? 'active' : '';
+    document.getElementById('tab-signup').className = t==='signup' ? 'active' : '';
+  }
+
+  function togglePass(id, btn) {
+    const inp = document.getElementById(id);
+    inp.type = inp.type==='password' ? 'text' : 'password';
+    btn.textContent = inp.type==='password' ? '👁️' : '🙈';
+  }
+
+  function handleLogin(e) {
+    e.preventDefault();
+    const btn = document.getElementById('login-btn');
+    btn.textContent = 'Signing in…'; btn.disabled = true;
+    setTimeout(() => {
+      const email    = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      const user = Auth.login(email, password);
+      if(user) { Auth.setUser(user); window.location.href='dashboard.html'; }
+      else {
+        const err = document.getElementById('login-error');
+        err.textContent = 'Invalid email or password. Please try again.';
+        err.style.display = 'block';
+        btn.textContent = 'Sign In →'; btn.disabled = false;
+      }
+    }, 800);
+  }
+
+  function handleSignup(e) {
+    e.preventDefault();
+    const name     = document.getElementById('signup-name').value.trim();
+    const email    = document.getElementById('signup-email').value.trim();
+    const password = document.getElementById('signup-password').value;
+    const user = Auth.register(name, email, password);
+    if(user) { Auth.setUser(user); window.location.href='dashboard.html'; }
+    else {
+      const err = document.getElementById('signup-error');
+      err.textContent = 'Email already registered. Please sign in instead.';
+      err.style.display = 'block';
+    }
+  }
+</script>
+</body>
+</html>

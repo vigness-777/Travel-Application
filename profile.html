@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Profile | Traveloop</title>
+  <link rel="stylesheet" href="globals.css">
+  <style>
+    .profile-layout { display: grid; grid-template-columns: 340px 1fr; gap: 24px; align-items: start; }
+    .profile-sidebar { display: flex; flex-direction: column; gap: 20px; }
+    .profile-card { 
+      background: var(--grad-card); 
+      border: 1px solid rgba(108, 71, 255, 0.2); 
+      border-radius: var(--radius-lg); 
+      padding: 32px 24px; 
+      text-align: center;
+      box-shadow: var(--glow-card);
+    }
+    .profile-avatar-big { 
+      width: 96px; height: 96px; border-radius: 50%; 
+      background: var(--grad-main); 
+      display: flex; align-items: center; justify-content: center; 
+      font-size: 38px; font-weight: 800; margin: 0 auto 18px; 
+      box-shadow: var(--glow-v);
+      border: 3px solid rgba(255,255,255,0.1);
+    }
+    .profile-name { font-size: 24px; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.5px; }
+    .profile-email { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
+    .profile-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 24px; }
+    .ps-item { background: rgba(0, 0, 0, 0.2); border-radius: 12px; padding: 12px 6px; border: 1px solid var(--border); }
+    .ps-val { font-size: 20px; font-weight: 800; font-family: 'Space Grotesk', sans-serif; color: var(--gold); }
+    .ps-lbl { font-size: 9px; color: var(--text-muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.08em; }
+    
+    .saved-city { 
+      display: flex; align-items: center; gap: 12px; padding: 12px; 
+      background: rgba(255,255,255,0.02); border: 1px solid var(--border); 
+      border-radius: var(--radius-sm); margin-bottom: 10px; transition: var(--transition); 
+    }
+    .saved-city:hover { border-color: var(--violet); background: rgba(108,71,255,0.05); transform: translateX(4px); }
+    .saved-city-thumb { width: 48px; height: 48px; border-radius: 8px; overflow: hidden; flex-shrink: 0; border: 1px solid var(--border); }
+    .saved-city-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    
+    .settings-title { font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 18px; display: flex; align-items: center; gap: 10px; }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); }
+    .toggle-row:last-child { border: none; }
+    .toggle-label { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+    .toggle-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    
+    .badge-collection { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; justify-content: center; }
+    .achievement-badge { 
+      display: flex; flex-direction: column; align-items: center; gap: 6px; 
+      background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border); 
+      border-radius: 14px; padding: 14px; width: 92px; transition: var(--transition);
+    }
+    .achievement-badge:hover { border-color: var(--gold); background: rgba(255,209,102,0.05); }
+    .achievement-badge .badge-icon { font-size: 26px; }
+    .achievement-badge .badge-name { font-size: 10px; color: var(--text-muted); font-weight: 600; text-align: center; }
+    
+    @media(max-width:1024px){ .profile-layout { grid-template-columns: 1fr; } .profile-sidebar { flex-direction: row; flex-wrap: wrap; } .profile-sidebar > * { flex: 1; min-width: 300px; } }
+    @media(max-width:640px){ .profile-sidebar > * { min-width: 100%; } }
+
+  </style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+<div id="nav-placeholder"></div>
+<div class="page-layout">
+  <div id="topbar-placeholder"></div>
+  <div class="page-content">
+    <div class="section-header" style="margin-bottom:24px">
+      <div><div class="section-title">👤 Profile & Settings</div><div class="section-sub">Manage your account and preferences</div></div>
+    </div>
+    <div class="profile-layout">
+      <!-- LEFT SIDEBAR -->
+      <div class="profile-sidebar">
+        <div class="profile-card">
+          <div class="profile-avatar-big" id="prof-avatar">?</div>
+          <div class="profile-name" id="prof-name">Loading…</div>
+          <div class="profile-email" id="prof-email">-</div>
+          <div class="badge badge-gold" style="margin-bottom:20px">🇮🇳 India Explorer</div>
+          <div id="prof-bio" style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:20px"></div>
+          <button onclick="editBio()" class="btn btn-secondary btn-sm" style="width:100%;justify-content:center">✏️ Edit Bio</button>
+          <div class="profile-stats" id="prof-stats"></div>
+        </div>
+
+        <div class="card">
+          <div style="font-size:14px;font-weight:700;margin-bottom:14px">🏆 Achievements</div>
+          <div class="badge-collection" id="achievements"></div>
+        </div>
+
+        <div class="card">
+          <div style="font-size:14px;font-weight:700;margin-bottom:14px">❤️ Saved Destinations</div>
+          <div id="saved-cities"></div>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div>
+        <!-- Edit Profile -->
+        <div class="card" style="margin-bottom:20px">
+          <div class="settings-title">✏️ Edit Profile</div>
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input type="text" id="edit-name" class="form-input" placeholder="Your name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" id="edit-email" class="form-input" placeholder="email@example.com">
+          </div>
+          <button onclick="saveProfile()" class="btn btn-primary">Save Changes</button>
+        </div>
+
+        <!-- Settings -->
+        <div class="card" style="margin-bottom:20px">
+          <div class="settings-title">⚙️ Preferences</div>
+          <div class="settings-section">
+            <div class="toggle-row">
+              <div><div class="toggle-label">Email Notifications</div><div class="toggle-sub">Trip reminders and tips</div></div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div><div class="toggle-label">Budget Alerts</div><div class="toggle-sub">Alert when near limit</div></div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div><div class="toggle-label">Smart Suggestions</div><div class="toggle-sub">Personalized travel ideas</div></div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div><div class="toggle-label">Dark Mode</div><div class="toggle-sub">Always on by default</div></div>
+              <label class="toggle-switch"><input type="checkbox" checked disabled><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Language -->
+        <div class="card" style="margin-bottom:20px">
+          <div class="settings-title">🌐 Language & Region</div>
+          <div class="form-group">
+            <label class="form-label">Language</label>
+            <select class="form-select" onchange="showToast('Language preference saved')">
+              <option>English</option><option>हिंदी (Hindi)</option><option>தமிழ் (Tamil)</option><option>తెలుగు (Telugu)</option><option>ಕನ್ನಡ (Kannada)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Currency Display</label>
+            <select class="form-select" onchange="showToast('Currency preference saved')">
+              <option>₹ Indian Rupee (INR)</option><option>$ US Dollar (USD)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Danger zone -->
+        <div class="card" style="border-color:rgba(239,68,68,0.2);background:rgba(239,68,68,0.04)">
+          <div class="settings-title" style="color:#f87171">⚠️ Account</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">These actions cannot be undone.</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button onclick="resetData()" class="btn btn-danger btn-sm">🔄 Reset All Data</button>
+            <button onclick="Auth.logout()" class="btn btn-danger btn-sm">🚪 Sign Out</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast-container" id="toast-container"></div>
+<script src="db.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+  if(!Auth.require()) return;
+  seedData();
+  document.getElementById('nav-placeholder').innerHTML=buildNav('');
+  document.getElementById('topbar-placeholder').innerHTML=buildTopbar('Profile');
+  loadProfile();
+});
+
+function loadProfile() {
+  const user=Auth.currentUser();
+  const trips=DB.where('trips',t=>t.userId===user.id);
+  const stops=DB.where('stops',s=>trips.map(t=>t.id).includes(s.tripId));
+  const cities=[...new Set(stops.map(s=>s.cityId))];
+  const acts=stops.reduce((a,s)=>a+(s.activities||[]).length,0);
+
+  document.getElementById('prof-avatar').textContent=user.avatar||user.name.slice(0,2).toUpperCase();
+  document.getElementById('prof-name').textContent=user.name;
+  document.getElementById('prof-email').textContent=user.email;
+  document.getElementById('prof-bio').textContent=user.bio||'No bio yet. Click Edit Bio to add one!';
+  document.getElementById('edit-name').value=user.name;
+  document.getElementById('edit-email').value=user.email;
+
+  document.getElementById('prof-stats').innerHTML=`
+    <div class="ps-item"><div class="ps-val">${trips.length}</div><div class="ps-lbl">Trips</div></div>
+    <div class="ps-item"><div class="ps-val">${cities.length}</div><div class="ps-lbl">Cities</div></div>
+    <div class="ps-item"><div class="ps-val">${acts}</div><div class="ps-lbl">Activities</div></div>`;
+
+  // Achievements
+  const badges=[
+    {icon:'🗺️',name:'First Trip',earned:trips.length>=1},
+    {icon:'🏙️',name:'City Hopper',earned:cities.length>=3},
+    {icon:'🎯',name:'Adventurer',earned:acts>=5},
+    {icon:'🌟',name:'Explorer',earned:trips.length>=3},
+    {icon:'💰',name:'Smart Planner',earned:trips.some(t=>t.budget>10000)},
+    {icon:'🇮🇳',name:'India Expert',earned:cities.length>=5},
+  ];
+  document.getElementById('achievements').innerHTML=badges.map(b=>`
+    <div class="achievement-badge" style="opacity:${b.earned?1:0.35};${b.earned?'border-color:rgba(139,92,246,0.4)':''}">
+      <span class="badge-icon">${b.icon}</span>
+      <span class="badge-name">${b.name}</span>
+      ${b.earned?'<span style="font-size:9px;color:#34d399">✓ Earned</span>':''}
+    </div>`).join('');
+
+  // Saved cities
+  const savedIds=user.savedCities||[];
+  const savedCitiesEl=document.getElementById('saved-cities');
+  if(!savedIds.length){ savedCitiesEl.innerHTML='<div style="font-size:13px;color:var(--text-muted)">No saved destinations yet. Add cities from the Explore page!</div>'; return; }
+  savedCitiesEl.innerHTML=savedIds.map(id=>{
+    const c=CITIES.find(x=>x.id===id);
+    if(!c) return '';
+    return `<div class="saved-city">
+      <div class="saved-city-thumb"><img src="${c.img}" alt="${c.name}" onerror="this.outerHTML='<div style=&quot;width:44px;height:44px;border-radius:8px;background:var(--grad-card);display:flex;align-items:center;justify-content:center&quot;>🏙️</div>'" loading="lazy"></div>
+      <div style="flex:1"><div style="font-weight:700;font-size:13px">${c.name}</div><div style="font-size:11px;color:var(--text-muted)">${c.state} · ${c.tag}</div></div>
+      <a href="city-search.html?city=${c.id}" class="btn btn-ghost btn-sm">View</a>
+    </div>`;
+  }).join('');
+}
+
+function saveProfile() {
+  const user=Auth.currentUser();
+  const name=document.getElementById('edit-name').value.trim();
+  const email=document.getElementById('edit-email').value.trim();
+  if(!name||!email){ showToast('Please fill all fields','error'); return; }
+  DB.update('users',user.id,{name,email,avatar:name.slice(0,2).toUpperCase()});
+  showToast('Profile updated ✅');
+  loadProfile();
+}
+
+function editBio() {
+  const user=Auth.currentUser();
+  const bio=prompt('Update your bio:',user.bio||'');
+  if(bio!==null){ DB.update('users',user.id,{bio}); loadProfile(); showToast('Bio updated ✅'); }
+}
+
+function resetData() {
+  if(!confirm('This will delete ALL your trips and data. Are you sure?')) return;
+  const user=Auth.currentUser();
+  DB.where('trips',t=>t.userId===user.id).forEach(t=>{
+    DB.where('stops',s=>s.tripId===t.id).forEach(s=>DB.delete('stops',s.id));
+    DB.where('notes',n=>n.tripId===t.id).forEach(n=>DB.delete('notes',n.id));
+    DB.where('checklist',c=>c.tripId===t.id).forEach(c=>DB.delete('checklist',c.id));
+    DB.delete('trips',t.id);
+  });
+  showToast('All trip data cleared');
+  setTimeout(()=>window.location.href='dashboard.html',1200);
+}
+</script>
+</body>
+</html>

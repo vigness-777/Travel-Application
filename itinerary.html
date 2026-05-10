@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Itinerary | Traveloop</title>
+  <link rel="stylesheet" href="globals.css">
+  <style>
+    .builder-layout { display:grid; grid-template-columns:1fr 340px; gap:24px; align-items:start; }
+    /* Timeline */
+    .timeline-wrap { position:relative; }
+    .timeline-connector { position:absolute; left:22px; top:16px; bottom:16px; width:2px; background:linear-gradient(to bottom,var(--violet),var(--gold)); z-index:0; }
+    .stop-card { display:flex; gap:20px; position:relative; margin-bottom:24px; animation:fadeInUp 0.4s ease; }
+    .stop-dot-col { display:flex; flex-direction:column; align-items:center; z-index:1; flex-shrink:0; }
+    .stop-dot { width:44px; height:44px; border-radius:50%; background:var(--grad-main); display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; box-shadow:var(--glow-v); border:2px solid var(--black); }
+    .stop-content { flex:1; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; transition:var(--transition); }
+    .stop-content:hover { border-color:var(--violet); box-shadow:var(--glow-card); }
+    .stop-banner { height:150px; position:relative; overflow:hidden; }
+    .stop-banner img { width:100%; height:100%; object-fit:cover; transition:transform 0.5s; }
+    .stop-content:hover .stop-banner img { transform:scale(1.04); }
+    .stop-banner-overlay { position:absolute; inset:0; background:linear-gradient(to top,rgba(5,5,8,0.95),rgba(5,5,8,0.1) 60%,transparent); }
+    .stop-banner-info { position:absolute; bottom:0; left:0; right:0; padding:16px; display:flex; justify-content:space-between; align-items:flex-end; }
+    .stop-city-name { font-size:22px; font-weight:800; }
+    .stop-city-state { font-size:12px; color:var(--text-muted); }
+    .stop-body { padding:16px; }
+    .stop-meta-row { display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:var(--text-muted); margin-bottom:14px; }
+    .stop-actions-row { display:flex; gap:8px; margin-bottom:14px; align-items:center; }
+    .activities-list { display:flex; flex-direction:column; gap:8px; }
+    .activity-item { display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-size:13px; transition:var(--transition); }
+    .activity-item:hover { background:rgba(139,92,246,0.08); border-color:rgba(139,92,246,0.3); }
+    .activity-icon { font-size:18px; }
+    .activity-del { margin-left:auto; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:16px; transition:var(--transition); }
+    .activity-del:hover { color:#f87171; }
+    .cost-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+    .cost-chip { display:flex; align-items:center; gap:4px; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:8px; padding:5px 10px; font-size:11px; }
+    .cost-chip .val { font-weight:700; color:var(--gold); }
+    .stop-footer-row { display:flex; justify-content:space-between; align-items:center; margin-top:12px; padding-top:12px; border-top:1px solid var(--border); }
+
+    /* Sidebar */
+    .sidebar-panel { background:var(--black3); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; position:sticky; top:80px; }
+    .sidebar-tabs { display:flex; border-bottom:1px solid var(--border); }
+    .s-tab { flex:1; padding:13px 8px; text-align:center; font-size:12px; font-weight:600; cursor:pointer; color:var(--text-muted); border:none; background:none; transition:var(--transition); }
+    .s-tab.active { color:var(--violet-l); background:rgba(108,71,255,0.08); border-bottom:2px solid var(--violet); }
+    .sidebar-body { padding:16px; max-height:600px; overflow-y:auto; }
+    .sidebar-section { display:none; }
+    .sidebar-section.active { display:block; }
+    .search-city-card { display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px; cursor:pointer; transition:var(--transition); margin-bottom:8px; }
+    .search-city-card:hover { background:rgba(139,92,246,0.1); border-color:rgba(139,92,246,0.35); }
+    .search-city-thumb { width:48px; height:48px; border-radius:8px; overflow:hidden; flex-shrink:0; }
+    .search-city-thumb img { width:100%; height:100%; object-fit:cover; }
+    .add-city-btn { padding:6px 12px; border-radius:8px; background:var(--grad-main); color:#fff; border:none; font-size:11px; font-weight:700; cursor:pointer; transition:var(--transition); white-space:nowrap; }
+    .add-city-btn.added { background:rgba(52,211,153,0.2); color:#34d399; border:1px solid rgba(52,211,153,0.4); }
+    .activity-picker { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+    .act-pick-card { background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px; cursor:pointer; transition:var(--transition); font-size:12px; text-align:center; flex:1; min-width:100px; }
+    .act-pick-card:hover { background:rgba(139,92,246,0.12); border-color:rgba(139,92,246,0.4); }
+    .act-pick-cat-filter { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+
+    .trip-summary-card { background:var(--grad-card); border:1px solid rgba(139,92,246,0.2); border-radius:var(--radius-sm); padding:14px; margin-bottom:12px; }
+    .summary-row { display:flex; justify-content:space-between; font-size:13px; padding:5px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
+    .summary-row:last-child { border:none; font-weight:700; color:var(--gold); }
+
+    @media(max-width:1024px){ .builder-layout{grid-template-columns:1fr;} .sidebar-panel{position:static;} }
+  </style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+<div id="nav-placeholder"></div>
+<div class="page-layout">
+  <div id="topbar-placeholder"></div>
+  <div class="page-content">
+
+    <!-- Trip Header -->
+    <div id="trip-header" class="card" style="margin-bottom:24px;background:var(--grad-card);border-color:rgba(139,92,246,0.25)">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px">
+        <div>
+          <div style="font-size:11px;color:var(--gold);font-weight:600;letter-spacing:0.05em;margin-bottom:6px">✈️ TRIP PLANNER</div>
+          <div style="font-size:24px;font-weight:800;margin-bottom:8px" id="th-name">Loading…</div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--text-muted)" id="th-meta"></div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <a href="itinerary-view.html?id=X" id="view-link" class="btn btn-secondary">👁 View Mode</a>
+          <a href="budget.html?id=X" id="budget-link" class="btn btn-secondary">📊 Budget</a>
+          <a href="my-trips.html" class="btn btn-ghost">← My Trips</a>
+        </div>
+      </div>
+      <div class="divider-grad" style="margin:16px 0"></div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap" id="th-stats"></div>
+    </div>
+
+    <div class="builder-layout">
+      <!-- TIMELINE -->
+      <div>
+        <div class="section-header">
+          <div class="section-title">📍 Trip Timeline</div>
+          <div id="stop-counter" class="badge badge-violet">0 stops</div>
+        </div>
+        <div style="height:8px"></div>
+        <div class="timeline-wrap">
+          <div class="timeline-connector"></div>
+          <div id="timeline-stops"></div>
+        </div>
+        <div id="empty-timeline" class="empty-state" style="display:none">
+          <div class="empty-icon">🗺️</div>
+          <div class="empty-title">No stops yet</div>
+          <div class="empty-sub">Search and add cities from the panel on the right →</div>
+        </div>
+      </div>
+
+      <!-- SIDEBAR -->
+      <div class="sidebar-panel">
+        <div class="sidebar-tabs">
+          <button class="s-tab active" onclick="showTab('cities')">🔍 Cities</button>
+          <button class="s-tab" onclick="showTab('activities')">🎯 Activities</button>
+          <button class="s-tab" onclick="showTab('summary')">📊 Summary</button>
+        </div>
+        <div class="sidebar-body">
+          <!-- Cities tab -->
+          <div class="sidebar-section active" id="tab-cities">
+            <input type="text" class="form-input" style="margin-bottom:12px" placeholder="🔍 Search Indian cities…" oninput="searchSidebarCities(this.value)" id="sidebar-search">
+            <div id="sidebar-cities-list"></div>
+          </div>
+          <!-- Activities tab -->
+          <div class="sidebar-section" id="tab-activities">
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Select a stop first, then add activities</div>
+            <div class="act-pick-cat-filter" id="act-cat-filter"></div>
+            <div id="activities-picker-list"></div>
+          </div>
+          <!-- Summary tab -->
+          <div class="sidebar-section" id="tab-summary">
+            <div id="summary-content"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast-container" id="toast-container"></div>
+<script src="db.js"></script>
+<script>
+let trip=null, stops=[], selectedStopId=null;
+
+document.addEventListener('DOMContentLoaded',()=>{
+  if(!Auth.require()) return;
+  seedData();
+  const params=new URLSearchParams(location.search);
+  const tripId=params.get('id');
+  if(!tripId){ window.location.href='my-trips.html'; return; }
+  trip=DB.findById('trips',tripId);
+  if(!trip){ window.location.href='my-trips.html'; return; }
+
+  document.getElementById('nav-placeholder').innerHTML=buildNav('trips');
+  document.getElementById('topbar-placeholder').innerHTML=buildTopbar('Itinerary Builder');
+  document.getElementById('view-link').href=`itinerary-view.html?id=${trip.id}`;
+  document.getElementById('budget-link').href=`budget.html?id=${trip.id}`;
+  document.getElementById('th-name').textContent=trip.name;
+  document.getElementById('th-meta').innerHTML=`<span>📅 ${fmt.date(trip.startDate)} → ${fmt.date(trip.endDate)}</span><span>👥 ${trip.travelers} travelers</span><span>🚆 ${trip.transport}</span><span>💰 Budget: ${fmt.currency(trip.budget)}</span>`;
+  loadStops();
+  renderSidebarCities(CITIES);
+  renderActivityPicker(ACTIVITIES);
+});
+
+function loadStops() {
+  stops=DB.where('stops',s=>s.tripId===trip.id).sort((a,b)=>a.order-b.order);
+  renderTimeline();
+  renderSummary();
+  document.getElementById('stop-counter').textContent=`${stops.length} stop${stops.length!==1?'s':''}`;
+}
+
+function renderTimeline() {
+  const container=document.getElementById('timeline-stops');
+  const empty=document.getElementById('empty-timeline');
+  if(!stops.length){ container.innerHTML=''; empty.style.display='flex'; return; }
+  empty.style.display='none';
+  container.innerHTML=stops.map((s,i)=>{
+    const city=CITIES.find(c=>c.id===s.cityId)||{name:s.cityName,img:'',state:''};
+    const acts=(s.activities||[]).map(id=>ACTIVITIES.find(a=>a.id===id)).filter(Boolean);
+    const totalCost=(s.hotelCost||0)+(s.transportCost||0)+(s.foodCost||0)+(s.activityCost||0);
+    return `<div class="stop-card">
+      <div class="stop-dot-col">
+        <div class="stop-dot">${i===0?'🚀':i===stops.length-1?'🏁':'📍'}</div>
+      </div>
+      <div class="stop-content" id="stop-${s.id}">
+        <div class="stop-banner">
+          <img src="${city.img}" alt="${city.name}" onerror="this.style.display='none'" loading="lazy">
+          <div class="stop-banner-overlay"></div>
+          <div class="stop-banner-info">
+            <div>
+              <div class="stop-city-name">${city.name}</div>
+              <div class="stop-city-state">${city.state||s.cityName}</div>
+            </div>
+            <div style="text-align:right">
+              <span class="badge badge-violet">Stop ${i+1}</span>
+            </div>
+          </div>
+        </div>
+        <div class="stop-body">
+          <div class="stop-meta-row">
+            <span>📅 ${s.days} day${s.days!==1?'s':''}</span>
+            <span>🏨 ₹${(s.hotelCost||0).toLocaleString('en-IN')}/stay</span>
+            <span>🚌 ₹${(s.transportCost||0).toLocaleString('en-IN')}</span>
+          </div>
+          <div class="stop-actions-row">
+            <button onclick="openActivityPicker('${s.id}')" class="btn btn-secondary btn-sm">+ Add Activity</button>
+            <button onclick="editDays('${s.id}',${s.days})" class="btn btn-ghost btn-sm">📅 ${s.days}d</button>
+            <button onclick="deleteStop('${s.id}')" class="btn btn-danger btn-sm" style="margin-left:auto">🗑️</button>
+          </div>
+          ${acts.length?`<div class="activities-list">${acts.map(a=>`
+            <div class="activity-item">
+              <span class="activity-icon">${a.icon}</span>
+              <div><div style="font-weight:600;font-size:13px">${a.name}</div>
+              <div style="font-size:11px;color:var(--text-muted)">${a.category} · ${a.duration}h · ₹${a.cost.toLocaleString('en-IN')}</div></div>
+              <button class="activity-del" onclick="removeActivity('${s.id}','${a.id}')">✕</button>
+            </div>`).join('')}</div>`:'<div style="font-size:12px;color:var(--text-muted);padding:8px 0">No activities added yet</div>'}
+          <div class="cost-row">
+            <div class="cost-chip">🏨 Hotel <span class="val">₹${(s.hotelCost||0).toLocaleString('en-IN')}</span></div>
+            <div class="cost-chip">🍛 Food <span class="val">₹${(s.foodCost||0).toLocaleString('en-IN')}</span></div>
+            <div class="cost-chip">🎯 Activities <span class="val">₹${(s.activityCost||0).toLocaleString('en-IN')}</span></div>
+          </div>
+          <div class="stop-footer-row">
+            <div style="font-size:12px;color:var(--text-muted)">Total for stop</div>
+            <div style="font-weight:800;font-size:16px" class="gradient-text">₹${totalCost.toLocaleString('en-IN')}</div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Fix banner fallbacks
+  document.querySelectorAll('.stop-banner').forEach(b=>{
+    const img=b.querySelector('img');
+    if(img && !img.src) img.style.display='none';
+  });
+}
+
+function renderSidebarCities(cities) {
+  document.getElementById('sidebar-cities-list').innerHTML=cities.map(c=>{
+    const alreadyAdded=stops.some(s=>s.cityId===c.id);
+    return `<div class="search-city-card">
+      <div class="search-city-thumb"><img src="${c.img}" alt="${c.name}" onerror="this.outerHTML='<div style=&quot;width:48px;height:48px;border-radius:8px;background:var(--grad-card);display:flex;align-items:center;justify-content:center;font-size:20px;&quot;>🏙️</div>'" loading="lazy"></div>
+      <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px">${c.name}</div><div style="font-size:11px;color:var(--text-muted)">${c.state} · ${c.tag}</div></div>
+      <button class="add-city-btn ${alreadyAdded?'added':''}" id="addbtn-${c.id}" onclick="addStop('${c.id}')">${alreadyAdded?'✓ Added':'+ Add'}</button>
+    </div>`;
+  }).join('');
+}
+
+function searchSidebarCities(q) {
+  const filtered=CITIES.filter(c=>c.name.toLowerCase().includes(q.toLowerCase())||c.state.toLowerCase().includes(q.toLowerCase()));
+  renderSidebarCities(filtered);
+}
+
+function addStop(cityId) {
+  if(stops.some(s=>s.cityId===cityId)){ showToast('City already in itinerary','error'); return; }
+  const city=CITIES.find(c=>c.id===cityId);
+  const stop=DB.insert('stops',{
+    tripId:trip.id, cityId, cityName:city.name, order:stops.length, days:2,
+    activities:[], hotelCost:city.cost*2, transportCost:Math.round(city.cost*0.3),
+    foodCost:Math.round(city.cost*0.25)*2, activityCost:0,
+  });
+  const btn=document.getElementById(`addbtn-${cityId}`);
+  if(btn){ btn.className='add-city-btn added'; btn.textContent='✓ Added'; }
+  showToast(`${city.name} added to itinerary! ✅`);
+  loadStops();
+}
+
+function deleteStop(id) {
+  DB.delete('stops',id);
+  showToast('Stop removed');
+  loadStops();
+}
+
+function editDays(stopId, current) {
+  const d=prompt(`Days to spend at this stop:`,current);
+  if(d&&!isNaN(d)&&+d>0) { DB.update('stops',stopId,{days:+d}); loadStops(); showToast('Duration updated'); }
+}
+
+function openActivityPicker(stopId) {
+  selectedStopId=stopId;
+  showTab('activities');
+}
+
+let actCatFilter='all';
+function renderActivityPicker(acts) {
+  const cats=['all',...new Set(ACTIVITIES.map(a=>a.category))];
+  document.getElementById('act-cat-filter').innerHTML=cats.map(c=>`
+    <button class="chip ${actCatFilter===c?'active':''}" onclick="setActCat('${c}',this)">${c==='all'?'All':c}</button>`).join('');
+  const filtered=actCatFilter==='all'?acts:acts.filter(a=>a.category===actCatFilter);
+  document.getElementById('activities-picker-list').innerHTML=filtered.map(a=>`
+    <div class="search-city-card" style="flex-direction:column;align-items:flex-start;gap:6px">
+      <div style="display:flex;align-items:center;gap:10px;width:100%">
+        <span style="font-size:22px">${a.icon}</span>
+        <div style="flex:1"><div style="font-weight:700;font-size:13px">${a.name}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${a.category} · ${a.duration}h · ₹${a.cost.toLocaleString('en-IN')}</div></div>
+        <button class="add-city-btn" onclick="addActivity('${a.id}')">+ Add</button>
+      </div>
+    </div>`).join('');
+}
+
+function setActCat(cat,btn) {
+  actCatFilter=cat;
+  document.querySelectorAll('#act-cat-filter .chip').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderActivityPicker(ACTIVITIES);
+}
+
+function addActivity(actId) {
+  if(!selectedStopId){ showToast('Select a stop first from Cities tab','error'); return; }
+  const stop=DB.findById('stops',selectedStopId);
+  if(!stop) return;
+  if((stop.activities||[]).includes(actId)){ showToast('Activity already added','error'); return; }
+  const act=ACTIVITIES.find(a=>a.id===actId);
+  const newActs=[...(stop.activities||[]),actId];
+  DB.update('stops',selectedStopId,{activities:newActs, activityCost:(stop.activityCost||0)+act.cost});
+  showToast(`${act.name} added! ✅`);
+  loadStops();
+}
+
+function removeActivity(stopId,actId) {
+  const stop=DB.findById('stops',stopId);
+  if(!stop) return;
+  const act=ACTIVITIES.find(a=>a.id===actId);
+  const newActs=(stop.activities||[]).filter(id=>id!==actId);
+  DB.update('stops',stopId,{activities:newActs, activityCost:Math.max(0,(stop.activityCost||0)-(act?.cost||0))});
+  loadStops();
+  showToast('Activity removed');
+}
+
+function renderSummary() {
+  const totalCost=stops.reduce((a,s)=>a+(s.hotelCost||0)+(s.transportCost||0)+(s.foodCost||0)+(s.activityCost||0),0);
+  const budget=trip.budget||0;
+  const pct=budget?Math.min(100,Math.round(totalCost/budget*100)):0;
+  const days=stops.reduce((a,s)=>a+(s.days||0),0);
+  document.getElementById('summary-content').innerHTML=`
+    <div class="trip-summary-card">
+      <div class="summary-row"><span>🏙️ Stops</span><span>${stops.length}</span></div>
+      <div class="summary-row"><span>📅 Days</span><span>${days}</span></div>
+      <div class="summary-row"><span>🎯 Activities</span><span>${stops.reduce((a,s)=>a+(s.activities||[]).length,0)}</span></div>
+      <div class="summary-row"><span>🏨 Hotels</span><span>${fmt.currency(stops.reduce((a,s)=>a+(s.hotelCost||0),0))}</span></div>
+      <div class="summary-row"><span>🚌 Transport</span><span>${fmt.currency(stops.reduce((a,s)=>a+(s.transportCost||0),0))}</span></div>
+      <div class="summary-row"><span>🍛 Food</span><span>${fmt.currency(stops.reduce((a,s)=>a+(s.foodCost||0),0))}</span></div>
+      <div class="summary-row"><span>🎯 Activities</span><span>${fmt.currency(stops.reduce((a,s)=>a+(s.activityCost||0),0))}</span></div>
+      <div class="summary-row"><span>💰 Total Planned</span><span>${fmt.currency(totalCost)}</span></div>
+    </div>
+    <div style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px">
+        <span style="color:var(--text-muted)">Budget usage</span>
+        <span style="font-weight:700;color:${pct>90?'#f87171':'var(--cyan)'}">${pct}%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${pct>90?'linear-gradient(90deg,#f87171,#ef4444)':'var(--grad-main)'}"></div></div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:6px">${fmt.currency(totalCost)} of ${fmt.currency(budget)} budget</div>
+    </div>
+    ${pct>90?'<div class="badge badge-red" style="width:100%;justify-content:center;padding:10px">⚠️ Over budget alert!</div>':''}
+    <a href="budget.html?id=${trip.id}" class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-top:8px">📊 View Full Analytics</a>`;
+}
+
+function showTab(tab) {
+  document.querySelectorAll('.sidebar-section').forEach(s=>s.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  
+  const tabs = ['cities', 'activities', 'summary'];
+  const idx = tabs.indexOf(tab);
+  document.querySelectorAll('.s-tab').forEach((btn, i) => {
+    btn.classList.toggle('active', i === idx);
+  });
+
+  if(tab==='summary') renderSummary();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Itinerary View | Traveloop</title>
+  <link rel="stylesheet" href="globals.css">
+  <style>
+    .view-hero { height:280px; border-radius:var(--radius-lg); overflow:hidden; position:relative; margin-bottom:28px; }
+    .view-hero img { width:100%; height:100%; object-fit:cover; }
+    .view-hero-overlay { position:absolute; inset:0; background:linear-gradient(to top,rgba(5,5,8,1) 0%,rgba(5,5,8,0.3) 60%,transparent); }
+    .view-hero-content { position:absolute; bottom:0; left:0; right:0; padding:28px 32px; }
+    .view-hero-title { font-size:28px; font-weight:800; margin-bottom:8px; }
+    .view-hero-meta { display:flex; gap:16px; font-size:13px; color:rgba(255,255,255,0.6); flex-wrap:wrap; }
+
+    .view-layout { display:grid; grid-template-columns:1fr 300px; gap:24px; align-items:start; }
+
+    /* Day cards */
+    .day-block { margin-bottom:32px; }
+    .day-header { display:flex; align-items:center; gap:14px; margin-bottom:16px; }
+    .day-badge { width:52px; height:52px; border-radius:14px; background:var(--grad-main); display:flex; flex-direction:column; align-items:center; justify-content:center; flex-shrink:0; box-shadow:var(--glow-purple); }
+    .day-badge .day-num { font-size:18px; font-weight:800; line-height:1; }
+    .day-badge .day-lbl { font-size:9px; opacity:0.7; letter-spacing:0.05em; }
+    .day-city { font-size:18px; font-weight:700; }
+    .day-date { font-size:12px; color:var(--text-muted); }
+    .activity-timeline { border-left:2px solid rgba(139,92,246,0.3); padding-left:20px; position:relative; }
+    .act-entry { position:relative; margin-bottom:14px; }
+    .act-entry::before { content:''; position:absolute; left:-25px; top:12px; width:10px; height:10px; border-radius:50%; background:var(--purple); border:2px solid var(--black); }
+    .act-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px 16px; display:flex; align-items:center; gap:12px; transition:var(--transition); }
+    .act-card:hover { background:var(--card-hover); border-color:var(--border-bright); }
+    .act-time { font-size:11px; color:var(--text-muted); font-weight:600; width:40px; flex-shrink:0; }
+    .act-icon-big { font-size:22px; }
+    .act-name { font-size:13px; font-weight:700; }
+    .act-meta { font-size:11px; color:var(--text-muted); }
+    .act-cost { margin-left:auto; font-size:13px; font-weight:700; color:var(--cyan); }
+    .hotel-block { background:rgba(139,92,246,0.08); border:1px solid rgba(139,92,246,0.2); border-radius:var(--radius-sm); padding:14px 16px; display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+
+    /* Calendar view */
+    .calendar-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+    .cal-header { text-align:center; font-size:10px; font-weight:700; color:var(--text-muted); padding:6px 0; text-transform:uppercase; letter-spacing:0.05em; }
+    .cal-day { aspect-ratio:1; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:12px; cursor:pointer; transition:var(--transition); position:relative; }
+    .cal-day.other { color:var(--text-muted); opacity:0.4; }
+    .cal-day.trip-day { background:rgba(139,92,246,0.2); border:1px solid rgba(139,92,246,0.4); color:var(--purple-light); font-weight:700; }
+    .cal-day.trip-day:hover { background:rgba(139,92,246,0.35); }
+    .cal-day.today { border:1px solid var(--cyan); color:var(--cyan); }
+
+    /* Right sidebar */
+    .view-sidebar { background:var(--black3); border:1px solid var(--border); border-radius:var(--radius); padding:20px; position:sticky; top:80px; }
+    .cost-breakdown { display:flex; flex-direction:column; gap:10px; margin-top:12px; }
+    .cost-item { display:flex; align-items:center; gap:10px; }
+    .cost-item-icon { font-size:16px; width:28px; }
+    .cost-item-bar-wrap { flex:1; }
+    .cost-item-label { font-size:12px; color:var(--text-muted); }
+    .cost-item-val { font-size:12px; font-weight:700; color:var(--cyan); }
+    .cost-bar { height:4px; border-radius:2px; background:var(--border); margin-top:3px; overflow:hidden; }
+    .cost-bar-fill { height:100%; border-radius:2px; background:var(--grad-main); transition:width 1s ease; }
+
+    @media(max-width:900px){ .view-layout{grid-template-columns:1fr;} .view-sidebar{position:static;} }
+  </style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+<div id="nav-placeholder"></div>
+<div class="page-layout">
+  <div id="topbar-placeholder"></div>
+  <div class="page-content">
+
+    <div id="view-hero-section" class="view-hero">
+      <img id="hero-img" src="" alt="Trip" onerror="this.style.display='none'">
+      <div class="view-hero-overlay"></div>
+      <div class="view-hero-content">
+        <div style="font-size:11px;color:var(--cyan);font-weight:600;letter-spacing:0.05em;margin-bottom:8px">👁 ITINERARY VIEW</div>
+        <div class="view-hero-title" id="trip-title">Loading…</div>
+        <div class="view-hero-meta" id="trip-meta"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;flex-wrap:wrap">
+      <div class="tabs" id="view-tabs">
+        <button class="tab-btn active" onclick="setView('list',this)">📋 List View</button>
+        <button class="tab-btn" onclick="setView('calendar',this)">📅 Calendar View</button>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <a href="" id="edit-link" class="btn btn-secondary btn-sm">✏️ Edit Itinerary</a>
+        <a href="" id="share-link" class="btn btn-ghost btn-sm">🔗 Share</a>
+        <a href="my-trips.html" class="btn btn-ghost btn-sm">← Back</a>
+      </div>
+    </div>
+
+    <div class="view-layout">
+      <div>
+        <!-- List view -->
+        <div id="list-view" class="animate-fadeIn"></div>
+        <!-- Calendar view -->
+        <div id="calendar-view" style="display:none" class="animate-fadeIn"></div>
+      </div>
+
+      <div class="view-sidebar">
+        <div style="font-size:15px;font-weight:700;margin-bottom:4px">💰 Cost Breakdown</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Estimated expenses</div>
+        <div id="total-display" style="font-size:26px;font-weight:800;margin-bottom:4px" class="gradient-text">₹0</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Total estimated budget</div>
+        <div class="cost-breakdown" id="cost-breakdown-bars"></div>
+        <div class="divider"></div>
+        <div id="trip-highlights"></div>
+        <a href="" id="full-budget-link" class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-top:12px">📊 Full Analytics</a>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast-container" id="toast-container"></div>
+<script src="db.js"></script>
+<script>
+let trip=null, stops=[], viewMode='list';
+
+document.addEventListener('DOMContentLoaded',()=>{
+  if(!Auth.require()) return;
+  seedData();
+  const params=new URLSearchParams(location.search);
+  const tripId=params.get('id');
+  if(!tripId){ window.location.href='my-trips.html'; return; }
+  trip=DB.findById('trips',tripId);
+  if(!trip){ window.location.href='my-trips.html'; return; }
+
+  document.getElementById('nav-placeholder').innerHTML=buildNav('trips');
+  document.getElementById('topbar-placeholder').innerHTML=buildTopbar('Itinerary View');
+  document.getElementById('hero-img').src=trip.cover||'';
+  document.getElementById('trip-title').textContent=trip.name;
+  document.getElementById('trip-meta').innerHTML=`<span>📅 ${fmt.date(trip.startDate)}</span><span>→</span><span>${fmt.date(trip.endDate)}</span><span>👥 ${trip.travelers} travelers</span><span>🚆 ${trip.transport}</span>`;
+  document.getElementById('edit-link').href=`itinerary.html?id=${trip.id}`;
+  document.getElementById('share-link').href=`shared-trip.html?id=${trip.id}`;
+  document.getElementById('full-budget-link').href=`budget.html?id=${trip.id}`;
+
+  stops=DB.where('stops',s=>s.tripId===trip.id).sort((a,b)=>a.order-b.order);
+  renderListView();
+  renderCostSidebar();
+  renderHighlights();
+});
+
+function setView(mode, btn) {
+  viewMode=mode;
+  document.querySelectorAll('#view-tabs .tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('list-view').style.display=mode==='list'?'block':'none';
+  document.getElementById('calendar-view').style.display=mode==='calendar'?'block':'none';
+  if(mode==='calendar') renderCalendar();
+}
+
+const TIMES=['08:00','10:00','12:00','14:00','16:00','18:00'];
+
+function renderListView() {
+  if(!stops.length){
+    document.getElementById('list-view').innerHTML=`<div class="empty-state"><div class="empty-icon">🗺️</div><div class="empty-title">No stops planned</div><div class="empty-sub">Add cities in the Itinerary Builder</div><a href="itinerary.html?id=${trip.id}" class="btn btn-primary" style="margin-top:16px">✏️ Build Itinerary</a></div>`;
+    return;
+  }
+  let dayCount=1;
+  document.getElementById('list-view').innerHTML=stops.map(s=>{
+    const city=CITIES.find(c=>c.id===s.cityId)||{name:s.cityName,img:'',state:''};
+    const acts=(s.activities||[]).map(id=>ACTIVITIES.find(a=>a.id===id)).filter(Boolean);
+    const startDay=dayCount; dayCount+=s.days;
+    const daysArr=Array.from({length:s.days},(_,i)=>startDay+i);
+    return `<div class="day-block">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;padding:12px 16px;background:var(--grad-card);border-radius:var(--radius-sm);border:1px solid rgba(139,92,246,0.2)">
+        <div style="font-size:32px">${s.cityId.startsWith('tn')?'🛕':s.cityId.startsWith('kl')?'🌿':s.cityId.startsWith('rj')?'🏰':s.cityId.startsWith('ga')?'🏖️':s.cityId.startsWith('hp')?'🏔️':'🏙️'}</div>
+        <div>
+          <div style="font-size:18px;font-weight:800">${city.name}</div>
+          <div style="font-size:12px;color:var(--text-muted)">${city.state||''} · Days ${daysArr.join(', ')} · ${s.days} night${s.days!==1?'s':''}</div>
+        </div>
+        <div style="margin-left:auto;text-align:right">
+          <div style="font-size:16px;font-weight:800" class="gradient-text">₹${((s.hotelCost||0)+(s.transportCost||0)+(s.foodCost||0)+(s.activityCost||0)).toLocaleString('en-IN')}</div>
+          <div style="font-size:11px;color:var(--text-muted)">estimated</div>
+        </div>
+      </div>
+      <div class="activity-timeline">
+        <div class="act-entry">
+          <div class="act-card" style="background:rgba(139,92,246,0.08);border-color:rgba(139,92,246,0.25)">
+            <span class="act-time">Check in</span>
+            <span class="act-icon-big">🏨</span>
+            <div><div class="act-name">Hotel Check-in</div><div class="act-meta">Accommodation</div></div>
+            <span class="act-cost">₹${(s.hotelCost||0).toLocaleString('en-IN')}</span>
+          </div>
+        </div>
+        ${acts.map((a,i)=>`
+        <div class="act-entry">
+          <div class="act-card">
+            <span class="act-time">${TIMES[i%TIMES.length]}</span>
+            <span class="act-icon-big">${a.icon}</span>
+            <div><div class="act-name">${a.name}</div><div class="act-meta">${a.category} · ${a.duration}h · ⭐${a.rating}</div></div>
+            <span class="act-cost">₹${a.cost.toLocaleString('en-IN')}</span>
+          </div>
+        </div>`).join('')}
+        <div class="act-entry">
+          <div class="act-card">
+            <span class="act-time">🍛</span>
+            <span class="act-icon-big">🍽️</span>
+            <div><div class="act-name">Meals & Local Dining</div><div class="act-meta">Food & beverages for ${s.days} day${s.days!==1?'s':''}</div></div>
+            <span class="act-cost">₹${(s.foodCost||0).toLocaleString('en-IN')}</span>
+          </div>
+        </div>
+        ${s.order<stops.length-1?`<div class="act-entry">
+          <div class="act-card" style="background:rgba(34,211,238,0.06);border-color:rgba(34,211,238,0.2)">
+            <span class="act-time">Travel</span>
+            <span class="act-icon-big">${trip.transport==='Flight'?'✈️':trip.transport==='Train'?'🚂':trip.transport==='Bus'?'🚌':'🔀'}</span>
+            <div><div class="act-name">Travel to ${stops[s.order+1]?.cityName||'next stop'}</div><div class="act-meta">${trip.transport}</div></div>
+            <span class="act-cost">₹${(s.transportCost||0).toLocaleString('en-IN')}</span>
+          </div>
+        </div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderCalendar() {
+  const start=new Date(trip.startDate);
+  const firstDay=new Date(start.getFullYear(),start.getMonth(),1);
+  const lastDay=new Date(start.getFullYear(),start.getMonth()+1,0);
+  const startPad=firstDay.getDay();
+  const end=new Date(trip.endDate);
+  const tripDays=new Set();
+  let d=new Date(start);
+  while(d<=end){ tripDays.add(d.toDateString()); d.setDate(d.getDate()+1); }
+  const today=new Date();
+  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  let html=`<div class="card"><div style="font-size:15px;font-weight:700;margin-bottom:16px">📅 ${firstDay.toLocaleString('en-IN',{month:'long',year:'numeric'})}</div>
+    <div class="calendar-grid">${days.map(d=>`<div class="cal-header">${d}</div>`).join('')}`;
+  for(let i=0;i<startPad;i++) html+=`<div class="cal-day other"></div>`;
+  for(let i=1;i<=lastDay.getDate();i++){
+    const date=new Date(start.getFullYear(),start.getMonth(),i);
+    const isTripDay=tripDays.has(date.toDateString());
+    const isToday=date.toDateString()===today.toDateString();
+    html+=`<div class="cal-day ${isTripDay?'trip-day':''} ${isToday?'today':''}" title="${isTripDay?'Trip day':''}">${i}</div>`;
+  }
+  html+=`</div></div>
+  <div style="display:flex;gap:12px;margin-top:12px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:6px;font-size:12px"><div style="width:14px;height:14px;border-radius:4px;background:rgba(139,92,246,0.4);border:1px solid rgba(139,92,246,0.6)"></div>Trip Day</div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:12px"><div style="width:14px;height:14px;border-radius:4px;border:1px solid var(--cyan)"></div>Today</div>
+  </div>`;
+  document.getElementById('calendar-view').innerHTML=html;
+}
+
+function renderCostSidebar() {
+  const hotel=stops.reduce((a,s)=>a+(s.hotelCost||0),0);
+  const transport=stops.reduce((a,s)=>a+(s.transportCost||0),0);
+  const food=stops.reduce((a,s)=>a+(s.foodCost||0),0);
+  const activities=stops.reduce((a,s)=>a+(s.activityCost||0),0);
+  const total=hotel+transport+food+activities;
+  document.getElementById('total-display').textContent=fmt.currency(total);
+  const cats=[{label:'Hotels',icon:'🏨',val:hotel,color:'#8b5cf6'},{label:'Transport',icon:'🚌',val:transport,color:'#22d3ee'},{label:'Food',icon:'🍛',val:food,color:'#34d399'},{label:'Activities',icon:'🎯',val:activities,color:'#fb923c'}];
+  document.getElementById('cost-breakdown-bars').innerHTML=cats.map(c=>`
+    <div class="cost-item">
+      <span class="cost-item-icon">${c.icon}</span>
+      <div class="cost-item-bar-wrap">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span class="cost-item-label">${c.label}</span>
+          <span class="cost-item-val">${fmt.currency(c.val)}</span>
+        </div>
+        <div class="cost-bar"><div class="cost-bar-fill" style="width:${total?Math.round(c.val/total*100):0}%;background:${c.color}"></div></div>
+      </div>
+    </div>`).join('');
+}
+
+function renderHighlights() {
+  const totalActs=stops.reduce((a,s)=>a+(s.activities||[]).length,0);
+  const totalDays=stops.reduce((a,s)=>a+s.days,0);
+  const cities=stops.map(s=>s.cityName);
+  document.getElementById('trip-highlights').innerHTML=`
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px">✨ Highlights</div>
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:12px">
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">🏙️ Cities</span><span style="font-weight:700">${cities.join(' → ')}</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">📅 Duration</span><span style="font-weight:700">${totalDays} days</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">🎯 Activities</span><span style="font-weight:700">${totalActs} planned</span></div>
+    </div>`;
+}
+</script>
+</body>
+</html>

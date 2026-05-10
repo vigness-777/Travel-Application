@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Analytics | Traveloop</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="globals.css">
+  <style>
+    .admin-hero { background:var(--grad-hero); border-radius:var(--radius-lg); padding:32px; margin-bottom:28px; border:1px solid rgba(139,92,246,0.25); position:relative; overflow:hidden; }
+    .admin-hero::before { content:'📊'; position:absolute; right:32px; top:50%; transform:translateY(-50%); font-size:100px; opacity:0.06; }
+    .kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:28px; }
+    .kpi-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; text-align:center; transition:var(--transition); }
+    .kpi-card:hover { transform:translateY(-3px); box-shadow:var(--glow-card); border-color:var(--border-bright); }
+    .kpi-val { font-size:32px; font-weight:800; font-family:'Space Grotesk',sans-serif; }
+    .kpi-lbl { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-top:4px; }
+    .kpi-trend { font-size:12px; margin-top:6px; }
+    .charts-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:24px; }
+    .chart-box { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:22px; }
+    .chart-box-title { font-size:15px; font-weight:700; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+    .chart-h { height:260px; position:relative; }
+    .city-rank-item { display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+    .city-rank-item:last-child { border:none; }
+    .rank-num { width:24px; height:24px; border-radius:50%; background:var(--grad-main); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; flex-shrink:0; }
+    .city-rank-name { flex:1; font-size:13px; font-weight:600; }
+    .city-rank-count { font-size:12px; color:var(--text-muted); }
+    .city-rank-bar { width:60px; }
+    .act-pill-list { display:flex; flex-wrap:wrap; gap:8px; }
+    .act-pill { display:flex; align-items:center; gap:6px; background:rgba(139,92,246,0.1); border:1px solid rgba(139,92,246,0.25); border-radius:20px; padding:6px 12px; font-size:12px; }
+    .act-pill .pill-count { background:var(--violet); color:#fff; border-radius:10px; padding:1px 6px; font-size:10px; font-weight:700; }
+    @media(max-width:900px){ .kpi-grid{grid-template-columns:1fr 1fr;} .charts-grid{grid-template-columns:1fr;} }
+    @media(max-width:600px){ .kpi-grid{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+<div id="nav-placeholder"></div>
+<div class="page-layout">
+  <div id="topbar-placeholder"></div>
+  <div class="page-content">
+
+    <div class="admin-hero">
+      <div style="font-size:13px;color:var(--gold);font-weight:600;letter-spacing:0.05em;margin-bottom:6px">📈 ADMIN VIEW</div>
+      <div style="font-size:24px;font-weight:800;margin-bottom:8px">Platform <span class="gradient-text">Analytics</span></div>
+      <div style="font-size:14px;color:var(--text-muted)">Your personal travel intelligence dashboard</div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-val gradient-text" id="kpi-trips">0</div><div class="kpi-lbl">Total Trips</div><div class="kpi-trend up stat-change">↑ Active</div></div>
+      <div class="kpi-card"><div class="kpi-val gradient-text" id="kpi-cities">0</div><div class="kpi-lbl">Cities Planned</div><div class="kpi-trend up stat-change">↑ Growing</div></div>
+      <div class="kpi-card"><div class="kpi-val gradient-text" id="kpi-acts">0</div><div class="kpi-lbl">Activities Added</div><div class="kpi-trend up stat-change">↑ Engaged</div></div>
+      <div class="kpi-card"><div class="kpi-val gradient-text" id="kpi-budget">₹0</div><div class="kpi-lbl">Total Budgeted</div><div class="kpi-trend up stat-change">↑ Smart Planner</div></div>
+    </div>
+
+    <!-- Charts row 1 -->
+    <div class="charts-grid">
+      <div class="chart-box">
+        <div class="chart-box-title">🗺️ Popular Destinations</div>
+        <div class="chart-h"><canvas id="destChart"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-box-title">💰 Budget by Trip</div>
+        <div class="chart-h"><canvas id="budgetChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Charts row 2 -->
+    <div class="charts-grid">
+      <div class="chart-box">
+        <div class="chart-box-title">🚆 Transport Preferences</div>
+        <div class="chart-h"><canvas id="transportChart"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-box-title">📅 Trip Status Overview</div>
+        <div class="chart-h"><canvas id="statusChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Tables row -->
+    <div class="charts-grid">
+      <div class="chart-box">
+        <div class="chart-box-title">🏆 Top Cities in Your Plans</div>
+        <div id="city-rank-list"></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-box-title">🎯 Most Selected Activities</div>
+        <div class="act-pill-list" id="act-pill-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast-container" id="toast-container"></div>
+<script src="db.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+  if(!Auth.require()) return;
+  seedData();
+  document.getElementById('nav-placeholder').innerHTML=buildNav('admin');
+  document.getElementById('topbar-placeholder').innerHTML=buildTopbar('Analytics');
+  buildDashboard();
+});
+
+function buildDashboard() {
+  const user=Auth.currentUser();
+  const trips=DB.where('trips',t=>t.userId===user.id);
+  const stops=DB.where('stops',s=>trips.map(t=>t.id).includes(s.tripId));
+  const allCityIds=stops.map(s=>s.cityId);
+  const allActIds=stops.flatMap(s=>s.activities||[]);
+  const totalBudget=trips.reduce((a,t)=>a+(t.budget||0),0);
+
+  // KPIs with animation
+  animateNum('kpi-trips',trips.length,'');
+  animateNum('kpi-cities',[...new Set(allCityIds)].length,'');
+  animateNum('kpi-acts',allActIds.length,'');
+  document.getElementById('kpi-budget').textContent=fmt.currency(totalBudget);
+
+  const colors=['#8b5cf6','#22d3ee','#34d399','#f59e0b','#f87171','#ec4899','#a78bfa','#67e8f9'];
+
+  // Destination chart
+  const cityFreq={};
+  allCityIds.forEach(id=>cityFreq[id]=(cityFreq[id]||0)+1);
+  const topCities=Object.entries(cityFreq).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  new Chart(document.getElementById('destChart'),{
+    type:'bar',
+    data:{
+      labels:topCities.map(([id])=>CITIES.find(c=>c.id===id)?.name||id),
+      datasets:[{data:topCities.map(([,v])=>v),backgroundColor:colors,borderRadius:8,borderSkipped:false}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'rgba(241,240,255,0.5)'},grid:{display:false}},y:{ticks:{color:'rgba(241,240,255,0.5)',stepSize:1},grid:{color:'rgba(255,255,255,0.05)'}}}}
+  });
+
+  // Budget chart
+  new Chart(document.getElementById('budgetChart'),{
+    type:'bar',
+    data:{
+      labels:trips.map(t=>t.name.length>16?t.name.slice(0,16)+'…':t.name),
+      datasets:[{label:'Budget',data:trips.map(t=>t.budget||0),backgroundColor:colors[0]+'bb',borderRadius:8,borderSkipped:false}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'rgba(241,240,255,0.5)',maxRotation:30},grid:{display:false}},y:{ticks:{color:'rgba(241,240,255,0.5)',callback:v=>'₹'+v.toLocaleString('en-IN')},grid:{color:'rgba(255,255,255,0.05)'}}}}
+  });
+
+  // Transport chart
+  const transportFreq={};
+  trips.forEach(t=>transportFreq[t.transport]=(transportFreq[t.transport]||0)+1);
+  const transports=Object.entries(transportFreq);
+  new Chart(document.getElementById('transportChart'),{
+    type:'doughnut',
+    data:{labels:transports.map(([k])=>k),datasets:[{data:transports.map(([,v])=>v),backgroundColor:colors,borderColor:'transparent',borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'rgba(241,240,255,0.7)',padding:16}}},cutout:'60%'}
+  });
+
+  // Status chart
+  const upcoming=trips.filter(t=>t.status==='upcoming').length;
+  const completed=trips.filter(t=>t.status==='completed').length;
+  new Chart(document.getElementById('statusChart'),{
+    type:'doughnut',
+    data:{labels:['Upcoming','Completed'],datasets:[{data:[upcoming,completed],backgroundColor:['#22d3ee','#34d399'],borderColor:'transparent',borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'rgba(241,240,255,0.7)',padding:16}}},cutout:'60%'}
+  });
+
+  // City rank table
+  const sortedCities=topCities.sort((a,b)=>b[1]-a[1]);
+  const maxCount=sortedCities[0]?.[1]||1;
+  document.getElementById('city-rank-list').innerHTML=sortedCities.map(([id,count],i)=>{
+    const city=CITIES.find(c=>c.id===id);
+    return `<div class="city-rank-item">
+      <div class="rank-num">${i+1}</div>
+      <div class="city-rank-name">${city?.name||id}</div>
+      <div class="city-rank-bar"><div class="progress-bar"><div class="progress-fill" style="width:${Math.round(count/maxCount*100)}%"></div></div></div>
+      <div class="city-rank-count">${count} stop${count!==1?'s':''}</div>
+    </div>`;
+  }).join('')||'<div style="font-size:13px;color:var(--text-muted)">No city data yet</div>';
+
+  // Activity pills
+  const actFreq={};
+  allActIds.forEach(id=>actFreq[id]=(actFreq[id]||0)+1);
+  const topActs=Object.entries(actFreq).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  document.getElementById('act-pill-list').innerHTML=topActs.map(([id,count])=>{
+    const act=ACTIVITIES.find(a=>a.id===id);
+    return `<div class="act-pill">${act?.icon||'🎯'} ${act?.name||id}<span class="pill-count">${count}</span></div>`;
+  }).join('')||'<div style="font-size:13px;color:var(--text-muted)">No activity data yet</div>';
+}
+
+function animateNum(id,target) {
+  const el=document.getElementById(id); let cur=0; const step=Math.ceil(target/30);
+  const t=setInterval(()=>{ cur=Math.min(cur+step,target); el.textContent=cur; if(cur>=target)clearInterval(t); },40);
+}
+</script>
+</body>
+</html>

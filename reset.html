@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Reset | Traveloop</title>
+  <link rel="stylesheet" href="globals.css">
+</head>
+<body style="display:flex;align-items:center;justify-content:center;min-height:100vh;">
+<div class="bg-mesh"></div>
+<div class="card" style="text-align:center;padding:40px;max-width:380px;position:relative;z-index:1">
+  <div style="font-size:48px;margin-bottom:16px">🔄</div>
+  <div style="font-size:20px;font-weight:800;margin-bottom:8px">Reset Demo Data</div>
+  <div style="color:var(--text-muted);font-size:13.5px;margin-bottom:24px">This clears all localStorage so the new demo account seeds correctly.</div>
+  <button onclick="resetAll()" class="btn btn-primary btn-lg" style="width:100%;justify-content:center">Clear & Reset</button>
+</div>
+<script>
+  function resetAll(){
+    localStorage.clear();
+    sessionStorage.clear();
+    document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:Inter,sans-serif;color:#f0eeff;background:#0a0a0f;font-size:18px;font-weight:600">✅ Reset done! <a href="index.html" style="color:#6c47ff;margin-left:10px">Go to Login →</a></div>';
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Plan a Trip | Traveloop</title>
+  <link rel="stylesheet" href="globals.css">
+  <style>
+    .create-layout { display:grid; grid-template-columns:1fr 1.1fr; gap:28px; align-items:start; }
+    .step-indicator { display:flex; align-items:center; gap:0; margin-bottom:32px; }
+    .step-dot { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; border:2px solid var(--border); color:var(--text-muted); transition:var(--transition); flex-shrink:0; }
+    .step-dot.active { background:var(--grad-main); border-color:transparent; color:#fff; box-shadow:var(--glow-v); }
+    .step-dot.done { background:rgba(52,211,153,0.2); border-color:#34d399; color:#34d399; }
+    .step-line { flex:1; height:2px; background:var(--border); transition:var(--transition); }
+    .step-line.done { background:var(--grad-main); }
+    .form-step { display:none; animation:fadeInUp 0.4s ease; }
+    .form-step.active { display:block; }
+    .transport-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+    .transport-btn { padding:14px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--card); cursor:pointer; text-align:center; transition:var(--transition); }
+    .transport-btn.selected { background:rgba(108,71,255,0.15); border-color:var(--violet); box-shadow:0 0 0 2px rgba(108,71,255,0.2); }
+    .transport-btn:hover { border-color:var(--border-bright); }
+    .transport-icon { font-size:28px; margin-bottom:6px; }
+    .transport-label { font-size:13px; font-weight:600; }
+
+    /* City picker */
+    .city-picker-header { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+    .city-search-box { flex:1; display:flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 14px; }
+    .city-search-box input { background:none; border:none; outline:none; color:var(--text-primary); font-size:13px; width:100%; }
+    .city-picker-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; max-height:520px; overflow-y:auto; }
+    .city-pick-card { border-radius:12px; overflow:hidden; position:relative; height:130px; cursor:pointer; border:2px solid transparent; transition:var(--transition); }
+    .city-pick-card:hover { border-color:rgba(139,92,246,0.5); transform:scale(1.02); }
+    .city-pick-card.selected { border-color:var(--violet); }
+    .city-pick-card.selected::after { content:'✓'; position:absolute; top:8px; right:8px; width:24px; height:24px; border-radius:50%; background:var(--grad-main); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; box-shadow:var(--glow-v); }
+    .city-pick-card img { width:100%; height:100%; object-fit:cover; }
+    .city-pick-overlay { position:absolute; inset:0; background:linear-gradient(to top,rgba(0,0,0,0.85) 0%,rgba(0,0,0,0.1) 100%); }
+    .city-pick-body { position:absolute; bottom:0; left:0; right:0; padding:10px 12px; }
+    .city-pick-name { font-size:13px; font-weight:700; }
+    .city-pick-meta { font-size:11px; color:var(--text-muted); }
+    .selected-cities { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; min-height:36px; }
+    .selected-city-tag { display:flex; align-items:center; gap:6px; background:rgba(139,92,246,0.15); border:1px solid rgba(139,92,246,0.35); border-radius:20px; padding:5px 12px; font-size:12px; font-weight:600; }
+    .selected-city-tag button { background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:14px; line-height:1; padding:0; }
+
+    /* AI Loading */
+    .ai-loading-overlay { position:fixed; inset:0; background:rgba(5,5,8,0.95); backdrop-filter:blur(20px); z-index:999; display:none; flex-direction:column; align-items:center; justify-content:center; gap:24px; }
+    .ai-loading-overlay.show { display:flex; }
+    .ai-ring { width:100px; height:100px; border-radius:50%; border:3px solid rgba(108,71,255,0.2); border-top:3px solid var(--violet); border-right:3px solid var(--gold); animation:spin 1.2s linear infinite; display:flex; align-items:center; justify-content:center; }
+    .ai-ring-inner { width:70px; height:70px; border-radius:50%; background:var(--grad-card); display:flex; align-items:center; justify-content:center; font-size:30px; animation:orbPulse 1.5s ease-in-out infinite; }
+    .ai-steps-list { display:flex; flex-direction:column; gap:10px; }
+    .ai-step-item { display:flex; align-items:center; gap:12px; font-size:14px; color:var(--text-muted); transition:var(--transition); }
+    .ai-step-item.done { color:#34d399; }
+    .ai-step-item.active { color:var(--text-primary); }
+    .ai-step-dot { width:8px; height:8px; border-radius:50%; background:var(--border); flex-shrink:0; transition:var(--transition); }
+    .ai-step-item.done .ai-step-dot { background:#34d399; }
+    .ai-step-item.active .ai-step-dot { background:var(--violet); animation:orbPulse 1s infinite; }
+
+    @media(max-width:900px){ .create-layout{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+<div id="nav-placeholder"></div>
+<div class="page-layout">
+  <div id="topbar-placeholder"></div>
+  <div class="page-content">
+    <div class="section-header" style="margin-bottom:24px">
+      <div><div class="section-title">🗺️ Plan New Trip</div><div class="section-sub">Fill in details and let Traveloop craft your perfect itinerary</div></div>
+      <a href="dashboard.html" class="btn btn-ghost btn-sm">← Dashboard</a>
+    </div>
+
+    <div class="create-layout">
+      <!-- LEFT: FORM -->
+      <div>
+        <!-- Step indicator -->
+        <div class="step-indicator">
+          <div class="step-dot active" id="dot-1">1</div>
+          <div class="step-line" id="line-1"></div>
+          <div class="step-dot" id="dot-2">2</div>
+          <div class="step-line" id="line-2"></div>
+          <div class="step-dot" id="dot-3">3</div>
+        </div>
+
+        <div class="card">
+          <!-- Step 1 -->
+          <div class="form-step active" id="step-1">
+            <div style="font-size:17px;font-weight:700;margin-bottom:20px">📝 Trip Details</div>
+            <div class="form-group">
+              <label class="form-label">Trip Name *</label>
+              <input type="text" id="trip-name" class="form-input" placeholder="e.g. Tamil Nadu Heritage Trail" required>
+            </div>
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label">Start Date *</label>
+                <input type="date" id="start-date" class="form-input" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">End Date *</label>
+                <input type="date" id="end-date" class="form-input" required>
+              </div>
+            </div>
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label">Budget (₹) *</label>
+                <input type="number" id="budget" class="form-input" placeholder="20000" min="1000">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Travelers</label>
+                <select id="travelers" class="form-select">
+                  <option value="1">Solo</option>
+                  <option value="2" selected>2 People</option>
+                  <option value="3">3 People</option>
+                  <option value="4">4 People</option>
+                  <option value="5+">5+ Group</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Trip Description</label>
+              <textarea id="trip-desc" class="form-textarea" placeholder="Briefly describe your trip goals, interests..."></textarea>
+            </div>
+            <button onclick="goStep(2)" class="btn btn-primary" style="width:100%;justify-content:center">Next: Transport Mode →</button>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="form-step" id="step-2">
+            <div style="font-size:17px;font-weight:700;margin-bottom:20px">🚆 Preferred Transport</div>
+            <div class="transport-grid">
+              <div class="transport-btn selected" onclick="selectTransport(this,'Flight')" id="t-flight"><div class="transport-icon">✈️</div><div class="transport-label">Flight</div><div style="font-size:11px;color:var(--text-muted)">Fast & comfortable</div></div>
+              <div class="transport-btn" onclick="selectTransport(this,'Train')" id="t-train"><div class="transport-icon">🚂</div><div class="transport-label">Train</div><div style="font-size:11px;color:var(--text-muted)">Scenic & affordable</div></div>
+              <div class="transport-btn" onclick="selectTransport(this,'Bus')" id="t-bus"><div class="transport-icon">🚌</div><div class="transport-label">Bus</div><div style="font-size:11px;color:var(--text-muted)">Budget friendly</div></div>
+              <div class="transport-btn" onclick="selectTransport(this,'Mixed')" id="t-mixed"><div class="transport-icon">🔀</div><div class="transport-label">Mixed</div><div style="font-size:11px;color:var(--text-muted)">Best of all modes</div></div>
+            </div>
+            <div style="display:flex;gap:12px;margin-top:20px">
+              <button onclick="goStep(1)" class="btn btn-ghost" style="flex:1;justify-content:center">← Back</button>
+              <button onclick="goStep(3)" class="btn btn-primary" style="flex:2;justify-content:center">Next: Select Cities →</button>
+            </div>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="form-step" id="step-3">
+            <div style="font-size:17px;font-weight:700;margin-bottom:6px">📍 Cities You'll Visit</div>
+            <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Select destinations — order them on the itinerary builder later</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Selected cities:</div>
+            <div class="selected-cities" id="selected-cities-tags"><span style="font-size:12px;color:var(--text-muted)">None selected yet</span></div>
+            <div style="display:flex;gap:12px;margin-top:16px">
+              <button onclick="goStep(2)" class="btn btn-ghost" style="flex:1;justify-content:center">← Back</button>
+                <button onclick="generateTrip()" class="btn btn-primary" style="flex:2;justify-content:center">✨ Generate Smart Itinerary</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: CITY PICKER -->
+      <div class="card">
+        <div class="city-picker-header">
+          <div style="font-size:15px;font-weight:700">🏙️ Pick Your Destinations</div>
+          <div class="city-search-box">
+            <span>🔍</span>
+            <input type="text" id="city-search" placeholder="Search cities..." oninput="filterCities(this.value)">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px" id="state-filters">
+          <button class="chip active" onclick="filterState('all',this)">All India</button>
+          <button class="chip" onclick="filterState('Tamil Nadu',this)">Tamil Nadu</button>
+          <button class="chip" onclick="filterState('Kerala',this)">Kerala</button>
+          <button class="chip" onclick="filterState('Rajasthan',this)">Rajasthan</button>
+          <button class="chip" onclick="filterState('Goa',this)">Goa</button>
+          <button class="chip" onclick="filterState('Himachal Pradesh',this)">Himachal</button>
+        </div>
+        <div class="city-picker-grid" id="city-picker-grid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AI LOADING -->
+<div class="ai-loading-overlay" id="ai-loading">
+  <div class="ai-ring"><div class="ai-ring-inner">✨</div></div>
+  <div style="text-align:center">
+    <div style="font-size:22px;font-weight:800;margin-bottom:6px">Crafting Your Journey</div>
+    <div style="font-size:14px;color:var(--text-muted)">Smart Planning Engine is building your personalized itinerary</div>
+  </div>
+  <div class="ai-steps-list" id="ai-steps">
+    <div class="ai-step-item active" id="ai-s1"><div class="ai-step-dot"></div>Analyzing destinations…</div>
+    <div class="ai-step-item" id="ai-s2"><div class="ai-step-dot"></div>Generating smart itinerary…</div>
+    <div class="ai-step-item" id="ai-s3"><div class="ai-step-dot"></div>Optimizing budget allocation…</div>
+    <div class="ai-step-item" id="ai-s4"><div class="ai-step-dot"></div>Finding best activities…</div>
+    <div class="ai-step-item" id="ai-s5"><div class="ai-step-dot"></div>Finalizing your trip plan…</div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+<script src="db.js"></script>
+<script>
+let currentStep=1, selectedTransport='Flight', selectedCityIds=[];
+
+document.addEventListener('DOMContentLoaded', () => {
+  if(!Auth.require()) return;
+  seedData();
+  document.getElementById('nav-placeholder').innerHTML = buildNav('create');
+  document.getElementById('topbar-placeholder').innerHTML = buildTopbar('Plan New Trip');
+  // Set default dates
+  const today=new Date(); const end=new Date(today); end.setDate(end.getDate()+7);
+  document.getElementById('start-date').value=today.toISOString().slice(0,10);
+  document.getElementById('end-date').value=end.toISOString().slice(0,10);
+  renderCityPicker(CITIES);
+});
+
+function renderCityPicker(cities) {
+  document.getElementById('city-picker-grid').innerHTML = cities.map(c=>`
+    <div class="city-pick-card ${selectedCityIds.includes(c.id)?'selected':''}" id="pick-${c.id}" onclick="toggleCity('${c.id}')">
+      <img src="${c.img}" alt="${c.name}" onerror="this.style.display='none'" loading="lazy">
+      <div class="city-pick-overlay"></div>
+      <div class="city-pick-body">
+        <div class="city-pick-name">${c.name}</div>
+        <div class="city-pick-meta">${c.state} · ${c.tag}</div>
+      </div>
+    </div>`).join('');
+}
+
+function filterCities(q) {
+  const filtered=CITIES.filter(c=>c.name.toLowerCase().includes(q.toLowerCase())||c.state.toLowerCase().includes(q.toLowerCase()));
+  renderCityPicker(filtered);
+}
+
+let activeState='all';
+function filterState(state,btn) {
+  activeState=state;
+  document.querySelectorAll('#state-filters .chip').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCityPicker(state==='all'?CITIES:CITIES.filter(c=>c.state===state));
+}
+
+function toggleCity(id) {
+  if(selectedCityIds.includes(id)) selectedCityIds=selectedCityIds.filter(x=>x!==id);
+  else selectedCityIds.push(id);
+  renderSelectedTags();
+  document.querySelectorAll('.city-pick-card').forEach(el=>{
+    const eid=el.id.replace('pick-','');
+    el.classList.toggle('selected',selectedCityIds.includes(eid));
+  });
+}
+
+function renderSelectedTags() {
+  const el=document.getElementById('selected-cities-tags');
+  if(!selectedCityIds.length){el.innerHTML='<span style="font-size:12px;color:var(--text-muted)">None selected yet</span>';return;}
+  el.innerHTML=selectedCityIds.map(id=>{
+    const c=CITIES.find(x=>x.id===id);
+    return `<div class="selected-city-tag">📍 ${c?.name||id}<button onclick="event.stopPropagation();toggleCity('${id}')">×</button></div>`;
+  }).join('');
+}
+
+function selectTransport(el,mode) {
+  selectedTransport=mode;
+  document.querySelectorAll('.transport-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function goStep(n) {
+  if(n===2) {
+    const name=document.getElementById('trip-name').value.trim();
+    const s=document.getElementById('start-date').value, e=document.getElementById('end-date').value;
+    if(!name||!s||!e){showToast('Please fill all required fields','error');return;}
+    if(new Date(e)<=new Date(s)){showToast('End date must be after start date','error');return;}
+  }
+  currentStep=n;
+  document.querySelectorAll('.form-step').forEach((el,i)=>el.classList.toggle('active',i+1===n));
+  [1,2,3].forEach(i=>{
+    const dot=document.getElementById(`dot-${i}`);
+    dot.classList.toggle('active',i===n);
+    dot.classList.toggle('done',i<n);
+    if(i<3){const line=document.getElementById(`line-${i}`);line.classList.toggle('done',i<n);}
+  });
+}
+
+function generateTrip() {
+  if(!selectedCityIds.length){showToast('Please select at least one city','error');return;}
+  const aiSteps=['ai-s1','ai-s2','ai-s3','ai-s4','ai-s5'];
+  document.getElementById('ai-loading').classList.add('show');
+  aiSteps.forEach(id=>{ const el=document.getElementById(id); el.classList.remove('active','done'); });
+  document.getElementById('ai-s1').classList.add('active');
+
+  let idx=0;
+  const timer=setInterval(()=>{
+    document.getElementById(aiSteps[idx]).classList.remove('active'); document.getElementById(aiSteps[idx]).classList.add('done');
+    idx++;
+    if(idx<aiSteps.length) document.getElementById(aiSteps[idx]).classList.add('active');
+    else { clearInterval(timer); saveAndGo(); }
+  },700);
+}
+
+function saveAndGo() {
+  const user=Auth.currentUser();
+  const name=document.getElementById('trip-name').value.trim();
+  const startDate=document.getElementById('start-date').value;
+  const endDate=document.getElementById('end-date').value;
+  const budget=parseInt(document.getElementById('budget').value)||15000;
+  const travelers=document.getElementById('travelers').value;
+  const description=document.getElementById('trip-desc').value.trim();
+  const coverUrl=CITIES.find(c=>c.id===selectedCityIds[0])?.img||'https://images.unsplash.com/photo-1548013146-72479768bada?w=800';
+
+  const trip=DB.insert('trips',{
+    userId:user.id, name, startDate, endDate, budget,
+    travelers, transport:selectedTransport, status:'upcoming',
+    cityIds:selectedCityIds, cover:coverUrl, description,
+  });
+
+  // Auto-generate stops
+  const totalDays=fmt.days(startDate,endDate);
+  const daysPerCity=Math.max(1,Math.floor(totalDays/selectedCityIds.length));
+  selectedCityIds.forEach((cityId,i)=>{
+    const city=CITIES.find(c=>c.id===cityId);
+    if(!city) return;
+    const acts=ACTIVITIES.filter(a=>Math.random()>0.4).slice(0,3).map(a=>a.id);
+    DB.insert('stops',{
+      tripId:trip.id, cityId, cityName:city.name, order:i, days:daysPerCity,
+      activities:acts, hotelCost:Math.round(city.cost*0.6)*daysPerCity,
+      transportCost:Math.round(city.cost*0.2), foodCost:Math.round(city.cost*0.25)*daysPerCity,
+      activityCost:Math.round(city.cost*0.15)*daysPerCity,
+    });
+  });
+
+  setTimeout(()=>{ window.location.href=`itinerary.html?id=${trip.id}`; },500);
+}
+</script>
+</body>
+</html>

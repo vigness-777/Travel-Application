@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>My Trips | Traveloop</title>
+  <link rel="stylesheet" href="globals.css">
+  <style>
+    .trips-filter { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:24px; }
+    .trip-card-full { border-radius:var(--radius); overflow:hidden; background:var(--card); border:1px solid var(--border); transition:var(--transition); display:flex; flex-direction:column; }
+    .trip-card-full:hover { transform:translateY(-4px); box-shadow:var(--glow-card); border-color:var(--border-bright); }
+    .trip-card-img { height:200px; position:relative; overflow:hidden; }
+    .trip-card-img img { width:100%; height:100%; object-fit:cover; transition:transform 0.5s ease; }
+    .trip-card-full:hover .trip-card-img img { transform:scale(1.06); }
+    .trip-card-img-overlay { position:absolute; inset:0; background:linear-gradient(to top,rgba(5,5,8,0.9),transparent 50%); }
+    .trip-card-badge { position:absolute; top:12px; left:12px; }
+    .trip-card-days { position:absolute; top:12px; right:12px; background:rgba(0,0,0,0.6); backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.1); border-radius:20px; padding:4px 12px; font-size:12px; font-weight:600; }
+    .trip-card-body { padding:20px; flex:1; display:flex; flex-direction:column; }
+    .trip-card-name { font-size:16px; font-weight:700; margin-bottom:8px; }
+    .trip-card-meta { display:flex; flex-wrap:wrap; gap:12px; font-size:12px; color:var(--text-muted); margin-bottom:14px; }
+    .trip-card-meta span { display:flex; align-items:center; gap:4px; }
+    .trip-card-cities { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
+    .trip-card-city { background:rgba(139,92,246,0.1); border:1px solid rgba(139,92,246,0.2); border-radius:20px; padding:3px 10px; font-size:11px; }
+    .trip-card-budget-bar { margin-bottom:16px; }
+    .trip-card-footer { display:flex; gap:8px; margin-top:auto; }
+    .trip-card-footer .btn { flex:1; justify-content:center; font-size:12px; }
+
+    .trips-header-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+    .count-badge { background:rgba(139,92,246,0.15); color:var(--purple-light); border:1px solid rgba(139,92,246,0.3); border-radius:20px; padding:4px 12px; font-size:13px; font-weight:700; }
+    @keyframes slideOut { to { opacity:0; transform:scale(0.9) translateY(-10px); } }
+  </style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+<div id="nav-placeholder"></div>
+<div class="page-layout">
+  <div id="topbar-placeholder"></div>
+  <div class="page-content">
+    <div class="section-header" style="margin-bottom:24px">
+      <div>
+        <div class="section-title">🧳 My Trips</div>
+        <div class="section-sub">All your planned and completed journeys</div>
+      </div>
+      <a href="create-trip.html" class="btn btn-primary">+ Plan New Trip</a>
+    </div>
+
+    <div class="trips-filter">
+      <button class="chip active" onclick="filterTrips('all',this)">All Trips</button>
+      <button class="chip" onclick="filterTrips('upcoming',this)">✈️ Upcoming</button>
+      <button class="chip" onclick="filterTrips('completed',this)">✅ Completed</button>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+        <span style="font-size:12px;color:var(--text-muted)">Sort:</span>
+        <select onchange="sortTrips(this.value)" class="form-select" style="width:140px;padding:7px 12px;font-size:12px">
+          <option value="date">Latest First</option>
+          <option value="budget">Highest Budget</option>
+          <option value="name">Name A-Z</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="trips-header-row">
+      <div class="count-badge" id="trip-count">0 trips</div>
+    </div>
+    <div style="height:12px"></div>
+    <div class="grid-3" id="trips-grid"></div>
+  </div>
+</div>
+<div class="toast-container" id="toast-container"></div>
+<script src="db.js"></script>
+<script>
+let allTrips=[], filterMode='all', sortMode='date';
+
+document.addEventListener('DOMContentLoaded',()=>{
+  if(!Auth.require()) return;
+  seedData();
+  document.getElementById('nav-placeholder').innerHTML=buildNav('trips');
+  document.getElementById('topbar-placeholder').innerHTML=buildTopbar('My Trips');
+  loadTrips();
+});
+
+function loadTrips() {
+  const user=Auth.currentUser();
+  allTrips=DB.where('trips',t=>t.userId===user.id);
+  renderTrips();
+}
+
+function renderTrips() {
+  let trips=[...allTrips];
+  if(filterMode!=='all') trips=trips.filter(t=>t.status===filterMode);
+  if(sortMode==='date') trips.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  else if(sortMode==='budget') trips.sort((a,b)=>b.budget-a.budget);
+  else trips.sort((a,b)=>a.name.localeCompare(b.name));
+
+  document.getElementById('trip-count').textContent=`${trips.length} trip${trips.length!==1?'s':''}`;
+  const grid=document.getElementById('trips-grid');
+
+  if(!trips.length){
+    grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1">
+      <div class="empty-icon">🧳</div>
+      <div class="empty-title">No trips found</div>
+      <div class="empty-sub">Start planning your first India adventure!</div>
+      <a href="create-trip.html" class="btn btn-primary" style="margin-top:16px">+ Plan New Trip</a>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML=trips.map(t=>{
+    const stops=DB.where('stops',s=>s.tripId===t.id);
+    const cities=(t.cityIds||[]).map(id=>CITIES.find(c=>c.id===id)?.name).filter(Boolean);
+    const days=fmt.days(t.startDate,t.endDate);
+    const spent=stops.reduce((a,s)=>a+(s.hotelCost||0)+(s.transportCost||0)+(s.foodCost||0)+(s.activityCost||0),0);
+    const pct=t.budget?Math.min(100,Math.round(spent/t.budget*100)):0;
+    return `<div class="trip-card-full" id="card-${t.id}">
+      <div class="trip-card-img">
+        <img src="${t.cover||''}" alt="${t.name}" onerror="this.style.display='none'" loading="lazy">
+        <div class="trip-card-img-overlay"></div>
+        <div class="trip-card-badge"><span class="badge badge-${t.status==='upcoming'?'cyan':'green'}">${t.status==='upcoming'?'🔵 Upcoming':'✅ Completed'}</span></div>
+        <div class="trip-card-days">📅 ${days} days</div>
+      </div>
+      <div class="trip-card-body">
+        <div class="trip-card-name">${t.name}</div>
+        <div class="trip-card-meta">
+          <span>📅 ${fmt.date(t.startDate)}</span>
+          <span>→</span>
+          <span>${fmt.date(t.endDate)}</span>
+          <span>👥 ${t.travelers} pax</span>
+          <span>🚆 ${t.transport}</span>
+        </div>
+        <div class="trip-card-cities">${cities.map(c=>`<span class="trip-card-city">📍 ${c}</span>`).join('')}${stops.length?`<span class="trip-card-city">${stops.length} stops</span>`:''}</div>
+        <div class="trip-card-budget-bar">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:6px">
+            <span>Budget used</span><span>${pct}% · ${fmt.currency(spent)} / ${fmt.currency(t.budget)}</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${pct>90?'linear-gradient(90deg,#f87171,#ef4444)':'var(--grad-main)'}"></div></div>
+        </div>
+        <div class="trip-card-footer">
+          <a href="itinerary.html?id=${t.id}" class="btn btn-primary">🗺️ View Plan</a>
+          <a href="budget.html?id=${t.id}" class="btn btn-secondary">📊 Budget</a>
+          <button onclick="deleteTrip('${t.id}')" class="btn btn-danger">🗑️</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterTrips(mode,btn) {
+  filterMode=mode;
+  document.querySelectorAll('.trips-filter .chip').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTrips();
+}
+
+function sortTrips(mode) { sortMode=mode; renderTrips(); }
+
+function deleteTrip(id) {
+  if(!confirm('Delete this trip and all its data?')) return;
+  const card=document.getElementById(`card-${id}`);
+  if(card){card.style.animation='slideOut 0.35s ease forwards';setTimeout(()=>{
+    DB.delete('trips',id);
+    DB.where('stops',s=>s.tripId===id).forEach(s=>DB.delete('stops',s.id));
+    DB.where('notes',n=>n.tripId===id).forEach(n=>DB.delete('notes',n.id));
+    DB.where('checklist',c=>c.tripId===id).forEach(c=>DB.delete('checklist',c.id));
+    loadTrips(); showToast('Trip deleted','success');
+  },350);}
+}
+</script>
+</body>
+</html>
